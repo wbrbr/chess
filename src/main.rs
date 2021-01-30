@@ -2,16 +2,17 @@ mod board;
 mod moves;
 mod square;
 mod uci;
+mod eval;
 
 use std::{
     fs::File,
     io::{BufRead, Write},
 };
 
-use board::{Board, Color, Piece};
+use board::{Board, Color};
+use eval::evaluate;
 use moves::{Move, enumerate_moves};
 use rand::Rng;
-use square::Square;
 use uci::{parse_command, Command};
 
 /* pub struct Game {
@@ -44,9 +45,12 @@ fn main() {
             Command::Position(b) => board = b,
             Command::Go(_) => {
                 let moves: Vec<Move> = enumerate_moves(&board, Color::Black).into_iter().filter(|m| m.is_legal(&mut board)).collect();
-                let i = rng.gen_range(0..moves.len());
-                println!("{}", moves.len());
-                let m = moves.get(i).expect("no valid moves");
+                let m = moves.iter().max_by_key(|m| {
+                    m.make(&mut board);
+                    let ret = -1 * evaluate(&board);
+                    m.unmake(&mut board);
+                    ret
+                }).expect("no valid moves");
                 let str = format!("bestmove {}\n", m.to_string());
                 stdout.lock().write_all(str.as_bytes()).unwrap();
             }

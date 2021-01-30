@@ -1,6 +1,6 @@
 use crate::{
     board::{Board, Color, Piece, PieceType, RANK_2, RANK_4},
-    square::{self, Square},
+    square::{Square},
 };
 
 #[derive(Clone, Copy, Debug)]

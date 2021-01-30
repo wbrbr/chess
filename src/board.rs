@@ -41,6 +41,13 @@ impl Color {
             Color::Black => Color::White,
         }
     }
+
+    pub fn to_int(&self) -> i32 {
+        match *self {
+            Color::White => 1,
+            Color::Black => -1,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -154,6 +161,10 @@ impl Board {
     pub fn is_in_check(&self, color: Color) -> bool {
         let moves= enumerate_moves(self, color.opposite());
         return moves.into_iter().any(|m| m.capture == Some(Piece::new(PieceType::King, color)));
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<Option<Piece>> {
+        self.board.iter()
     }
 }
 
