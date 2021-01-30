@@ -6,7 +6,7 @@ use crate::board::{
 use crate::square::Square;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Move {
+struct Move {
     from: Square,
     to: Square,
     promotion: Option<PieceType>,

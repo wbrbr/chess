@@ -158,7 +158,7 @@ impl Board {
         }
     }
 
-    pub fn is_in_check(&self, color: Color) -> bool {
+    pub fn is_in_check(&mut self, color: Color) -> bool {
         let moves= enumerate_moves(self, color.opposite());
         return moves.into_iter().any(|m| m.capture == Some(Piece::new(PieceType::King, color)));
     }
