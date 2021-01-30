@@ -69,14 +69,10 @@ fn exec_move(board: &mut Board, mov: Move) {
     board.set(mov.to, Some(final_piece));
 }
 
-fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
-    let mut board = match split.next()? {
-        "fen" => panic!("position fen is not implemented"), // TODO
-        "startpos" => Board::starting_board(),
-        _ => return None,
-    };
-
+fn parse_position_startpos(split: &mut SplitAsciiWhitespace) -> Option<Command> {
     let mut color = Color::White;
+    let mut board = Board::starting_board();
+
     if let Some(tok) = split.next() {
         if tok != "moves" {
             return None;
@@ -92,6 +88,29 @@ fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
         board: board,
         player: color,
     }))
+}
+
+fn parse_position_fen(split: &mut SplitAsciiWhitespace) -> Option<Command> {
+    // it's kind of stupid to make a join here that will be split again later but whatever
+    let str = split.fold(String::new(), |acc, x| {
+        let mut res = acc;
+        if !res.is_empty() {
+            res.push(' ');
+        }
+        res += x;
+        res
+    });
+
+    let game = Game::from_fen(&str)?;
+    Some(Command::Position(game))
+}
+
+fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
+    match split.next()? {
+        "fen" => parse_position_fen(split),
+        "startpos" => parse_position_startpos(split),
+        _ => return None,
+    }
 }
 
 pub fn parse_command(cmd: &str) -> Option<Command> {
