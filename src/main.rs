@@ -5,6 +5,7 @@ mod uci;
 mod eval;
 mod search;
 mod game;
+mod fen;
 
 use std::{
     fs::File,

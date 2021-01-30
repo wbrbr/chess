@@ -4,6 +4,14 @@ use crate::board::{FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_
 pub struct Square(u8, u8);
 
 impl Square {
+    pub fn new(file: u8, rank: u8) -> Option<Square> {
+        if file >= 0 && file <= 7 && rank >= 0 && rank <= 7 {
+            Some(Square::new_nocheck(file, rank))
+        } else {
+            None
+        }
+    }
+
     pub fn new_nocheck(file: u8, rank: u8) -> Square {
         Square(file, rank)
     }
