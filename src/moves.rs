@@ -1,6 +1,6 @@
 use crate::{
     board::{Board, Color, Piece, PieceType, RANK_2, RANK_4},
-    square::Square,
+    square::{self, Square},
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -69,22 +69,93 @@ fn enumerate_pawn(board: &Board, color: Color, from: Square, piece: Piece, moves
     for off in captures_off.iter() {
         if let Some(sq) = from.offset(*off) {
             match board.get(sq) {
-                Some(p) if p.color != color => moves.push(Move {
-                    from: from,
-                    to: sq,
-                }),
-                _ => {},
+                Some(p) if p.color != color => moves.push(Move { from: from, to: sq }),
+                _ => {}
             }
         }
     }
 }
 
-fn enumerate_king(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {}
+fn enumerate_king(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+    for i in -1..=1 {
+        for j in -1..=1 {
+            if i == 0 && j == 0 {
+                continue;
+            }
 
-fn enumerate_queen(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {}
+            if let Some(sq) = from.offset((i, j)) {
+                if !board.contains_ally(sq, color) {
+                    moves.push(Move { from: from, to: sq })
+                }
+            }
+        }
+    }
+}
 
-fn enumerate_rook(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {}
+fn enumerate_straight_line(
+    board: &Board,
+    color: Color,
+    from: Square,
+    moves: &mut Vec<Move>,
+    dir: (i8, i8),
+) {
+    let mut i = 1i8;
+    while let Some(sq) = from.offset((i * dir.0, i * dir.1)) {
+        match board.get(sq) {
+            Some(p) if p.color == color => break,
+            Some(p) if p.color != color => {
+                moves.push(Move { from: from, to: sq });
+                break;
+            }
+            None => moves.push(Move { from: from, to: sq }),
+            Some(_) => unreachable!(),
+        }
+        i += 1;
+    }
+}
 
-fn enumerate_bishop(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {}
+fn enumerate_queen(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+    for i in -1..=1 {
+        for j in -1..=1 {
+            if i == 0 && j == 0 {
+                continue;
+            }
+            enumerate_straight_line(board, color, from, moves, (i, j));
+        }
+    }
+}
 
-fn enumerate_knight(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {}
+fn enumerate_rook(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+    enumerate_straight_line(board, color, from, moves, (-1, 0));
+    enumerate_straight_line(board, color, from, moves, (1, 0));
+    enumerate_straight_line(board, color, from, moves, (0, -1));
+    enumerate_straight_line(board, color, from, moves, (0, 1));
+}
+
+fn enumerate_bishop(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+    enumerate_straight_line(board, color, from, moves, (-1, -1));
+    enumerate_straight_line(board, color, from, moves, (-1, 1));
+    enumerate_straight_line(board, color, from, moves, (1, -1));
+    enumerate_straight_line(board, color, from, moves, (1, 1));
+}
+
+fn enumerate_knight(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+    let offsets = [
+        (-2, -1),
+        (-2, 1),
+        (-1, 2),
+        (-1, -2),
+        (1, 2),
+        (1, -2),
+        (2, -1),
+        (2, 1),
+    ];
+
+    for off in offsets.iter() {
+        if let Some(sq) = from.offset(*off) {
+            if !board.contains_ally(sq, color) {
+                moves.push(Move { from: from, to: sq })
+            }
+        }
+    }
+}

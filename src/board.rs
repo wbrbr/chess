@@ -134,6 +134,13 @@ impl Board {
         }
         res
     }
+
+    pub fn contains_ally(&self, square: Square, color: Color) -> bool {
+        match self.get(square) {
+            Some(p) if p.color == color => true,
+            _ => false,
+        }
+    }
 }
 
 #[test]
