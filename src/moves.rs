@@ -31,14 +31,10 @@ impl Move {
     }
 
     pub fn is_legal(&self, board: &mut Board) -> bool {
-        // TODO: make/unmake move instead of cloning
-        /*self.make(board);
-        let ret = board.is_in_check(self.piece.color);
+        self.make(board);
+        let ret = !board.is_in_check(self.piece.color);
         self.unmake(board);
-        ret */
-        let mut new_board = board.clone();
-        self.make(&mut new_board);
-        return !new_board.is_in_check(self.piece.color);
+        ret
     }
 
     pub fn make(&self, board: &mut Board) {
