@@ -9,7 +9,7 @@ use std::{
 };
 
 use board::{Board, Color, Piece};
-use moves::enumerate_moves;
+use moves::{Move, enumerate_moves};
 use rand::Rng;
 use square::Square;
 use uci::{parse_command, Command};
@@ -43,7 +43,7 @@ fn main() {
             Command::Quit => return,
             Command::Position(b) => board = b,
             Command::Go(_) => {
-                let moves = enumerate_moves(&board, Color::Black);
+                let moves: Vec<Move> = enumerate_moves(&board, Color::Black).into_iter().filter(|m| m.is_legal(&mut board)).collect();
                 let i = rng.gen_range(0..moves.len());
                 println!("{}", moves.len());
                 let m = moves.get(i).expect("no valid moves");

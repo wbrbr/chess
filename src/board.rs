@@ -1,4 +1,4 @@
-use crate::square::Square;
+use crate::{moves::enumerate_moves, square::Square};
 
 pub const FILE_A: u8 = 0;
 pub const FILE_B: u8 = 1;
@@ -32,6 +32,15 @@ pub enum PieceType {
 pub enum Color {
     White,
     Black,
+}
+
+impl Color {
+    pub fn opposite(&self) -> Self {
+        match *self {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -141,6 +150,11 @@ impl Board {
             _ => false,
         }
     }
+
+    pub fn is_in_check(&self, color: Color) -> bool {
+        let moves= enumerate_moves(self, color.opposite());
+        return moves.into_iter().any(|m| m.capture == Some(Piece::new(PieceType::King, color)));
+    }
 }
 
 #[test]
@@ -171,10 +185,22 @@ fn test_start() {
     let board = Board::starting_board();
 
     let sq = Square::new_nocheck(FILE_E, RANK_2);
-    assert_eq!(board.get(sq), Some(Piece { typ: PieceType::Pawn, color: Color::White}));
+    assert_eq!(
+        board.get(sq),
+        Some(Piece {
+            typ: PieceType::Pawn,
+            color: Color::White
+        })
+    );
 
     let sq = Square::new_nocheck(FILE_A, RANK_7);
     assert_eq!(sq.index(), 48);
     println!("{:?}", board.board);
-    assert_eq!(board.get(sq), Some(Piece { typ: PieceType::Pawn, color: Color::Black}));
+    assert_eq!(
+        board.get(sq),
+        Some(Piece {
+            typ: PieceType::Pawn,
+            color: Color::Black
+        })
+    );
 }
