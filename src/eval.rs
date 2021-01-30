@@ -14,9 +14,22 @@ fn value(typ: PieceType) -> i32 {
 pub fn evaluate(board: &mut Board) -> i32 {
 
     // TODO: check
-    if enumerate_moves(board, Color::White).into_iter().filter(|m| m.is_legal(board)).count() == 0 {
+    let mut white_lost = true;
+    let mut black_lost = true;
+
+    board.iter().filter_map(|x| match x {
+        Some(p) if p.typ == PieceType::King => Some(*p),
+        _ => None
+    }).for_each(|p| match p.color {
+        Color::White => white_lost = false,
+        Color::Black => black_lost = false,
+    });
+
+    if white_lost {
+        // println!("white lost");
         return i32::MIN;
-    } else if enumerate_moves(board, Color::Black).into_iter().filter(|m| m.is_legal(board)).count() == 0 {
+    } else if black_lost {
+        // println!("black lost: {}", board.to_fen());
         return i32::MAX;
     }
 

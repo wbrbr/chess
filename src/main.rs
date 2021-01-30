@@ -4,6 +4,7 @@ mod square;
 mod uci;
 mod eval;
 mod search;
+mod game;
 
 use std::{
     fs::File,
@@ -27,7 +28,7 @@ fn main() {
 
     let mut f = File::create("/home/wilhem/chess_log").unwrap();
 
-    let mut board = Board::starting_board();
+    let mut game = None;
 
     let mut rng = rand::thread_rng();
 
@@ -43,10 +44,11 @@ fn main() {
                 .unwrap(),
             Command::IsReady => stdout.lock().write_all("readyok\n".as_bytes()).unwrap(),
             Command::Quit => return,
-            Command::Position(b) => board = b,
+            Command::Position(g) => game = Some(g),
             Command::Go(_) => {
-                let m = best_move(&board, Color::Black, 4).expect("no valid move");
-                let str = format!("bestmove {}\n", m.to_string());
+                let g = game.as_ref().expect("no position");
+                let (m, score) = best_move(&g.board, g.player, 4).expect("no valid move");
+                let str = format!("info score cp {}\nbestmove {}\n", score.to_string(), m.to_string());
                 stdout.lock().write_all(str.as_bytes()).unwrap();
             }
             _ => {}

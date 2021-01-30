@@ -1,9 +1,13 @@
 use std::str::SplitAsciiWhitespace;
 
-use crate::board::{
-    Board, Piece, PieceType, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H,
-};
 use crate::square::Square;
+use crate::{
+    board::{
+        Board, Color, Piece, PieceType, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G,
+        FILE_H,
+    },
+    game::Game,
+};
 
 #[derive(Clone, Copy, Debug)]
 struct Move {
@@ -19,7 +23,7 @@ pub enum Command {
     IsReady,
     //SetOption()
     NewGame,
-    Position(Board),
+    Position(Game),
     Go(String), // TODO: something better
     Stop,
     PonderHit,
@@ -72,15 +76,22 @@ fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
         _ => return None,
     };
 
-    if split.next()? != "moves" {
-        return None;
+    let mut color = Color::White;
+    if let Some(tok) = split.next() {
+        if tok != "moves" {
+            return None;
+        }
+
+        for m in split {
+            exec_move(&mut board, parse_move(m)?);
+            color = color.opposite();
+        }
     }
 
-    for m in split {
-        exec_move(&mut board, parse_move(m)?);
-    }
-
-    Some(Command::Position(board))
+    Some(Command::Position(Game {
+        board: board,
+        player: color,
+    }))
 }
 
 pub fn parse_command(cmd: &str) -> Option<Command> {

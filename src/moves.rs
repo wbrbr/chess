@@ -30,13 +30,6 @@ impl Move {
         self.from.to_string() + &self.to.to_string()
     }
 
-    pub fn is_legal(&self, board: &mut Board) -> bool {
-        self.make(board);
-        let ret = !board.is_in_check(self.piece.color);
-        self.unmake(board);
-        ret
-    }
-
     pub fn make(&self, board: &mut Board) {
         board.set(self.from, None);
         board.set(self.to, Some(self.piece));
