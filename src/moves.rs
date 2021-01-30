@@ -123,7 +123,6 @@ fn enumerate_straight_line(
     from: Square,
     moves: &mut Vec<Move>,
     dir: (i8, i8),
-    piece: Piece,
 ) {
     let mut i = 1i8;
     while let Some(sq) = from.offset((i * dir.0, i * dir.1)) {
@@ -152,26 +151,23 @@ fn enumerate_queen(board: &Board, color: Color, from: Square, moves: &mut Vec<Mo
                 from,
                 moves,
                 (i, j),
-                Piece::new(PieceType::Queen, color),
             );
         }
     }
 }
 
 fn enumerate_rook(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
-    let piece = Piece::new(PieceType::Rook, color);
-    enumerate_straight_line(board, color, from, moves, (-1, 0), piece);
-    enumerate_straight_line(board, color, from, moves, (1, 0), piece);
-    enumerate_straight_line(board, color, from, moves, (0, -1), piece);
-    enumerate_straight_line(board, color, from, moves, (0, 1), piece);
+    enumerate_straight_line(board, color, from, moves, (-1, 0));
+    enumerate_straight_line(board, color, from, moves, (1, 0));
+    enumerate_straight_line(board, color, from, moves, (0, -1));
+    enumerate_straight_line(board, color, from, moves, (0, 1));
 }
 
 fn enumerate_bishop(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
-    let piece = Piece::new(PieceType::Bishop, color);
-    enumerate_straight_line(board, color, from, moves, (-1, -1), piece);
-    enumerate_straight_line(board, color, from, moves, (-1, 1), piece);
-    enumerate_straight_line(board, color, from, moves, (1, -1), piece);
-    enumerate_straight_line(board, color, from, moves, (1, 1), piece);
+    enumerate_straight_line(board, color, from, moves, (-1, -1));
+    enumerate_straight_line(board, color, from, moves, (-1, 1));
+    enumerate_straight_line(board, color, from, moves, (1, -1));
+    enumerate_straight_line(board, color, from, moves, (1, 1));
 }
 
 fn enumerate_knight(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {

@@ -26,13 +26,6 @@ impl Game {
             player: player
         })
     }
-
-    pub fn new() -> Self {
-        Game {
-            board: Board::starting_board(),
-            player: Color::White,
-        }
-    }
 }
 
 #[test]

@@ -12,16 +12,8 @@ use std::{
     io::{BufRead, Write},
 };
 
-use board::{Board, Color};
-use eval::evaluate;
-use moves::{Move, enumerate_moves};
 use search::best_move;
 use uci::{parse_command, Command};
-
-/* pub struct Game {
-    board: Board,
-    next_move: Color,
-} */
 
 fn main() {
     let stdin = std::io::stdin();
@@ -30,8 +22,6 @@ fn main() {
     let mut f = File::create("/home/wilhem/chess_log").unwrap();
 
     let mut game = None;
-
-    let mut rng = rand::thread_rng();
 
     for l in stdin.lock().lines().map(|l| l.unwrap()) {
         f.write_all(l.as_bytes()).unwrap();
