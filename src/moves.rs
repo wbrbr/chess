@@ -72,9 +72,9 @@ pub fn enumerate_moves(board: &Board, color: Color) -> Vec<Move> {
     moves
 }
 
-pub fn enumerate_legal_moves(board: &mut Board, color: Color) -> Vec<Move> {
+/* pub fn enumerate_legal_moves(board: &mut Board, color: Color) -> Vec<Move> {
     enumerate_moves(board, color).into_iter().filter(|m| m.is_legal(board)).collect()
-}
+} */
 
 fn enumerate_pawn(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
     let off_rank = match color {

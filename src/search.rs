@@ -10,16 +10,23 @@ use crate::{
 pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<Move> {
     let mut board = board.clone();
 
-    let moves: Vec<Move> = enumerate_moves(&mut board, color)
-        .into_iter()
-        .filter(|m| m.is_legal(&mut board)).collect();
+    let moves = enumerate_moves(&mut board, color);
 
-    moves.into_iter().max_by_key(|m| {
+    let mut best_move = None;
+    let mut best_score = i32::MIN;
+    for m in moves.iter() {
+        if !m.is_legal(&mut board) {
+            continue;
+        }
+
         m.make(&mut board);
-        let ret = negamax(&mut board, color, depth) * color.to_int();
+        if negamax(&mut board, color, depth)  * color.to_int() > best_score {
+            best_move = Some(*m);
+        }
         m.unmake(&mut board);
-        ret
-    })
+    }
+
+    best_move
 }
 
 pub fn negamax(board: &mut Board, color: Color, depth: u32) -> i32 {
