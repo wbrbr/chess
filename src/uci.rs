@@ -1,6 +1,8 @@
 use std::str::SplitAsciiWhitespace;
 
-use crate::board::{Board, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, Piece, PieceType};
+use crate::board::{
+    Board, Piece, PieceType, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H,
+};
 use crate::square::Square;
 
 #[derive(Clone, Copy, Debug)]
@@ -90,7 +92,7 @@ pub fn parse_command(cmd: &str) -> Option<Command> {
         "go" => Some(Command::Go("".to_owned())),
         "quit" => Some(Command::Quit),
         "position" => parse_position(&mut split),
-        _ => None
+        _ => None,
     }
 }
 

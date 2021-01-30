@@ -18,7 +18,7 @@ pub const RANK_6: u8 = 5;
 pub const RANK_7: u8 = 6;
 pub const RANK_8: u8 = 7;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PieceType {
     King,
     Queen,
@@ -28,13 +28,13 @@ pub enum PieceType {
     Pawn,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Color {
     White,
     Black,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Piece {
     pub typ: PieceType,
     pub color: Color,
@@ -157,4 +157,17 @@ fn test_e4_fen() {
         &board.to_fen(),
         "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR"
     );
+}
+
+#[test]
+fn test_start() {
+    let board = Board::starting_board();
+
+    let sq = Square::new_nocheck(FILE_E, RANK_2);
+    assert_eq!(board.get(sq), Some(Piece { typ: PieceType::Pawn, color: Color::White}));
+
+    let sq = Square::new_nocheck(FILE_A, RANK_7);
+    assert_eq!(sq.index(), 48);
+    println!("{:?}", board.board);
+    assert_eq!(board.get(sq), Some(Piece { typ: PieceType::Pawn, color: Color::Black}));
 }
