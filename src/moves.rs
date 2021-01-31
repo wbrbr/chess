@@ -61,15 +61,20 @@ impl Move {
 }
 
 /// Generate pseudo legal moves
+/// If there is no king, we don't generate any moves (the game is already lost)
 pub fn enumerate_moves(board: &Board, color: Color) -> Vec<Move> {
     let mut moves = Vec::with_capacity(1000);
+    let mut has_king = false;
     for rank in 0..8 {
         for file in 0..8 {
             let sq = Square::new_nocheck(file, rank);
             if let Some(piece) = board.get(sq) {
                 if piece.color == color {
                     match piece.typ {
-                        PieceType::King => enumerate_king(board, color, sq, &mut moves),
+                        PieceType::King => {
+                            has_king = true;
+                            enumerate_king(board, color, sq, &mut moves);
+                        }
                         PieceType::Queen => enumerate_queen(board, color, sq, &mut moves),
                         PieceType::Rook => enumerate_rook(board, color, sq, &mut moves),
                         PieceType::Bishop => enumerate_bishop(board, color, sq, &mut moves),
@@ -79,6 +84,10 @@ pub fn enumerate_moves(board: &Board, color: Color) -> Vec<Move> {
                 }
             }
         }
+    }
+
+    if !has_king {
+        moves.clear();
     }
 
     moves
