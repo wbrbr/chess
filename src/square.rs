@@ -1,7 +1,7 @@
 use crate::board::{FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
 
 #[derive(Clone, Copy, Debug)]
-pub struct Square(u8, u8);
+pub struct Square(pub u8, pub u8);
 
 impl Square {
     pub fn new(file: u8, rank: u8) -> Option<Square> {
