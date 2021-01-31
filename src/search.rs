@@ -1,5 +1,3 @@
-use std::cmp::{max, min};
-
 use crate::{
     board::{Board, Color},
     eval::evaluate,
@@ -14,17 +12,17 @@ pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)>
 
     let mut board = board.clone();
 
-    let old_score = evaluate(&board);
+    let old_score = evaluate(&board, 0)*color.to_int();
 
     let moves = enumerate_moves(&mut board, color);
 
     let mut best_move = None;
     let mut best_score = i32::MIN;
-    
+
     for m in moves.iter() {
 
         m.make(&mut board);
-        let sc = negamax(&mut board, color, depth-1) * color.to_int();
+        let sc = minmax(&mut board, color.opposite(), 1, depth) * color.to_int();
         if sc > best_score {
             best_move = Some(*m);
             best_score = sc;
@@ -35,25 +33,50 @@ pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)>
     Some((best_move?, best_score-old_score))
 }
 
-pub fn negamax(board: &mut Board, color: Color, depth: u32) -> i32 {
-    //println!("{}:{:?}", depth, color);
-    if depth == 0 {
-        evaluate(board)
+/* struct Line {
+    length: usize,
+    data: [Option<Move>; 10],
+}
+
+impl Line {
+    pub fn new() -> Self {
+        Line {
+            length: 0,
+            data: [None; 10],
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        self.data.iter().fold(String::new(), |acc, x| match x {
+            None => acc,
+            Some(m) => acc + m.to_string().as_ref() + " ",
+        })
+    }
+} */
+
+fn minmax(board: &mut Board, color: Color, depth: u32, max_depth: u32) -> i32 {
+
+    if depth == max_depth {
+        evaluate(board, depth)
     } else {
         // TODO: remove the branches
 
         let moves = enumerate_moves(board, color);
         let mut best_score = match color {
-            Color::White => i32::MIN,
-            Color::Black => i32::MAX,
+            Color::White => -1000000,
+            Color::Black => 1000000,
         };
 
         for m in moves.iter() {
             m.make(board);
-            let score = negamax(board, color.opposite(), depth - 1);
-            best_score = match color {
-                Color::White => max(best_score, score),
-                Color::Black => min(best_score, score),
+            let score = minmax(board, color.opposite(), depth+1, max_depth);
+            match color {
+                Color::White => if score > best_score {
+                    best_score = score;
+                }
+                Color::Black => if score < best_score {
+                    best_score = score;
+                }
             };
             m.unmake(board);
         }

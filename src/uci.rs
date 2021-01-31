@@ -68,26 +68,13 @@ fn exec_move(board: &mut Board, mov: Move) {
     board.set(mov.to, Some(final_piece));
 }
 
-fn parse_position_fen(split: &mut SplitAsciiWhitespace) -> Option<Game> {
-    // it's kind of stupid to make a join here that will be split again later but whatever
-    let str = split.fold(String::new(), |acc, x| {
-        let mut res = acc;
-        if !res.is_empty() {
-            res.push(' ');
-        }
-        res += x;
-        res
-    });
-
-    Game::from_fen(&str)
-}
-
 fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
     let mut game = match split.next()? {
-        "fen" => parse_position_fen(split)?,
+        "fen" => Game::from_fen(split)?,
         "startpos" => Game::new(),
         _ => return None,
     };
+
 
     if let Some(tok) = split.next() {
         if tok != "moves" {
@@ -101,6 +88,10 @@ fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
     }
 
     Some(Command::Position(game))
+}
+
+fn is_whitespace(str: &str) -> bool {
+    str.chars().all(|c| c.is_ascii_whitespace())
 }
 
 pub fn parse_command(cmd: &str) -> Option<Command> {

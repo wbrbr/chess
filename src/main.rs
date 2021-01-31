@@ -28,15 +28,15 @@ fn main() {
         f.write_all("\n".as_bytes()).unwrap();
         let cmd = parse_command(&l);
         write!(&mut f, "{:?}\n", cmd).unwrap();
-        match cmd.unwrap() {
-            Command::Uci => stdout
+        match cmd {
+            Some(Command::Uci) => stdout
                 .lock()
                 .write_all("id name chess\nid author Wilhem Barbier\nuciok\n".as_bytes())
                 .unwrap(),
-            Command::IsReady => stdout.lock().write_all("readyok\n".as_bytes()).unwrap(),
-            Command::Quit => return,
-            Command::Position(g) => game = Some(g),
-            Command::Go(_) => {
+            Some(Command::IsReady) => stdout.lock().write_all("readyok\n".as_bytes()).unwrap(),
+            Some(Command::Quit) => return,
+            Some(Command::Position(g)) => game = Some(g),
+            Some(Command::Go(_)) => {
                 let g = game.as_ref().expect("no position");
                 let (m, score) = best_move(&g.board, g.player, 4).expect("no valid move");
                 let str = format!("info score cp {}\nbestmove {}\n", score.to_string(), m.to_string());

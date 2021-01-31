@@ -8,8 +8,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn from_fen(str: &str) -> Option<Self> {
-        let mut split = str.split(' ');
+    pub fn from_fen<'a, I: Iterator<Item=&'a str>>(split: &mut I) -> Option<Self> {
         let board_str = split.next()?;
         let board = board_from_fen(&mut board_str.chars().peekable())?;
 
@@ -20,6 +19,11 @@ impl Game {
             "b" => Color::Black,
             _ => return None,
         };
+
+        split.next()?; // castling rights
+        split.next()?; // en passant
+        split.next()?; // halfmove counter
+        split.next()?; // fullmove counter
 
         Some(Game {
             board: board,
@@ -42,5 +46,5 @@ fn test_parse_game_start() {
         board: Board::starting_board(),
         player: Color::White,
     };
-    assert_eq!(game, Game::from_fen(fen).unwrap());
+    assert_eq!(game, Game::from_fen(&mut fen.split_ascii_whitespace()).unwrap());
 }
