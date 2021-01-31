@@ -12,8 +12,6 @@ pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)>
 
     let mut board = board.clone();
 
-    let old_score = evaluate(&board, 0)*color.to_int();
-
     let moves = enumerate_moves(&mut board, color);
 
     let mut best_move = None;
@@ -30,7 +28,7 @@ pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)>
         m.unmake(&mut board);
     }
 
-    Some((best_move?, best_score-old_score))
+    Some((best_move?, best_score))
 }
 
 /* struct Line {
