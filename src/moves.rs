@@ -4,13 +4,30 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug)]
-pub struct Move {
-    pub from: Square,
-    pub to: Square,
-    pub piece: Piece,
-    pub capture: Option<Piece>,
-    pub promotion: Option<Piece>,
-    // TODO: castling, en passant, ...
+pub enum Move {
+    Normal {
+        from: Square,
+        to: Square,
+        piece: Piece,
+        capture: Option<Piece>,
+        promotion: Option<Piece>,
+    },
+    Castling {
+        from: Square,
+        to: Square,
+        from_rook: Square,
+        to_rook: Square,
+        color: Color,
+    },
+}
+
+pub fn is_in_check(color: Color, opponent_moves: &[Move]) -> bool {
+    opponent_moves.iter().any(|m| match m {
+        Move::Normal {
+            capture: Some(p), ..
+        } if p.typ == PieceType::King && p.color == color => true,
+        _ => false,
+    })
 }
 
 impl Move {
@@ -18,7 +35,7 @@ impl Move {
         let piece = board.get(from).expect("the from square is empty");
         let capture = board.get(to);
 
-        Move {
+        Move::Normal {
             from: from,
             to: to,
             piece: piece,
@@ -28,42 +45,116 @@ impl Move {
     }
 
     pub fn to_string(&self) -> String {
-        let mut res: String = self.from.to_string() + &self.to.to_string();
+        match *self {
+            Move::Normal {
+                from,
+                to,
+                piece,
+                capture,
+                promotion,
+            } => {
+                let mut res: String = from.to_string() + &to.to_string();
 
-        if let Some(p) = self.promotion {
-            res.push(match p.typ {
-                PieceType::Queen => 'q',
-                PieceType::Bishop => 'b',
-                PieceType::Rook => 'r',
-                PieceType::Knight => 'n',
-                _ => unreachable!(),
-            })
+                if let Some(p) = promotion {
+                    res.push(match p.typ {
+                        PieceType::Queen => 'q',
+                        PieceType::Bishop => 'b',
+                        PieceType::Rook => 'r',
+                        PieceType::Knight => 'n',
+                        _ => unreachable!(),
+                    })
+                }
+
+                res
+            }
+            Move::Castling {
+                from,
+                to,
+                from_rook,
+                to_rook,
+                color,
+            } => from.to_string() + &to.to_string(),
         }
-
-        res
     }
 
+    // TODO: take game and update castling rights
     pub fn make(&self, board: &mut Board) {
-        board.set(self.from, None);
+        match *self {
+            Move::Normal {
+                from,
+                to,
+                piece,
+                capture,
+                promotion,
+            } => {
+                board.set(from, None);
 
-        let piece = match self.promotion {
-            Some(x) => x,
-            None => self.piece,
-        };
+                let piece = match promotion {
+                    Some(x) => x,
+                    None => piece,
+                };
 
-        board.set(self.to, Some(piece));
+                board.set(to, Some(piece));
+            }
+            Move::Castling {
+                from,
+                to,
+                from_rook,
+                to_rook,
+                color,
+            } => {
+                board.set(from, None);
+                board.set(from_rook, None);
+                board.set(to, Some(Piece::new(PieceType::King, color)));
+                board.set(to_rook, Some(Piece::new(PieceType::Rook, color)));
+            }
+        }
     }
 
     pub fn unmake(&self, board: &mut Board) {
-        board.set(self.from, Some(self.piece));
-        board.set(self.to, self.capture);
+        match *self {
+            Move::Normal {
+                from,
+                to,
+                piece,
+                capture,
+                promotion,
+            } => {
+                board.set(from, Some(piece));
+                board.set(to, capture);
+            }
+            Move::Castling {
+                from,
+                to,
+                from_rook,
+                to_rook,
+                color,
+            } => {
+                board.set(from, Some(Piece::new(PieceType::King, color)));
+                board.set(to, None);
+                board.set(from_rook, Some(Piece::new(PieceType::Rook, color)));
+                board.set(to_rook, None);
+            }
+        }
     }
 
     pub fn is_legal(&self, opponent_moves: &[Move]) -> bool {
-        opponent_moves.iter().all(|m| match m.capture {
-            Some(p) if p.typ == PieceType::King && p.color == self.piece.color => false,
-            _ => true,
-        })
+        match *self {
+            Move::Normal {
+                from: _,
+                to: _,
+                piece,
+                capture: _,
+                promotion: _,
+            } => !is_in_check(piece.color, opponent_moves),
+            Move::Castling {
+                from: _,
+                to: _,
+                from_rook: _,
+                to_rook: _,
+                color: _,
+            } => false,
+        }
     }
 }
 
