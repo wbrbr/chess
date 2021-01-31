@@ -61,9 +61,4 @@ pub fn evaluate(board: &Board, depth: u32) -> i32 {
         }
     }
     val
-
-    /* board
-        .iter()
-        .filter_map(|x| *x)
-        .fold(0, |acc, p| acc + value(p.typ, depth) * p.color.to_int()) */
 }

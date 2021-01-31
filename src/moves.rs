@@ -1,6 +1,6 @@
 use crate::{
-    board::{Board, Color, Piece, PieceType, RANK_2, RANK_4},
-    square::{Square},
+    board::{Board, Color, Piece, PieceType, RANK_1, RANK_2, RANK_4, RANK_8},
+    square::Square,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -9,12 +9,12 @@ pub struct Move {
     pub to: Square,
     pub piece: Piece,
     pub capture: Option<Piece>,
+    pub promotion: Option<Piece>,
     // TODO: castling, promotion, en passant, ...
 }
 
-
 impl Move {
-    pub fn new(board: &Board, from: Square, to: Square) -> Self {
+    pub fn new(board: &Board, from: Square, to: Square, promotion: Option<Piece>) -> Self {
         let piece = board.get(from).expect("the from square is empty");
         let capture = board.get(to);
 
@@ -22,17 +22,36 @@ impl Move {
             from: from,
             to: to,
             piece: piece,
-            capture: capture
+            capture: capture,
+            promotion: promotion,
         }
     }
 
     pub fn to_string(&self) -> String {
-        self.from.to_string() + &self.to.to_string()
+        let mut res: String = self.from.to_string() + &self.to.to_string();
+
+        if let Some(p) = self.promotion {
+            res.push(match p.typ {
+                PieceType::Queen => 'q',
+                PieceType::Bishop => 'b',
+                PieceType::Rook => 'r',
+                PieceType::Knight => 'n',
+                _ => unreachable!(),
+            })
+        }
+
+        res
     }
 
     pub fn make(&self, board: &mut Board) {
         board.set(self.from, None);
-        board.set(self.to, Some(self.piece));
+
+        let piece = match self.promotion {
+            Some(x) => x,
+            None => self.piece,
+        };
+
+        board.set(self.to, Some(piece));
     }
 
     pub fn unmake(&self, board: &mut Board) {
@@ -69,6 +88,24 @@ pub fn enumerate_moves(board: &Board, color: Color) -> Vec<Move> {
     enumerate_moves(board, color).into_iter().filter(|m| m.is_legal(board)).collect()
 } */
 
+fn enumerate_promotions(
+    board: &Board,
+    color: Color,
+    from: Square,
+    to: Square,
+    moves: &mut Vec<Move>,
+) {
+    for typ in &[
+        PieceType::Queen,
+        PieceType::Knight,
+        PieceType::Rook,
+        PieceType::Bishop,
+    ] {
+        let p = Piece::new(*typ, color);
+        moves.push(Move::new(board, from, to, Some(p)));
+    }
+}
+
 fn enumerate_pawn(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
     let off_rank = match color {
         Color::White => 1,
@@ -79,12 +116,18 @@ fn enumerate_pawn(board: &Board, color: Color, from: Square, moves: &mut Vec<Mov
 
     if let Some(simple_sq) = from.offset(simple) {
         if board.get(simple_sq).is_none() {
-            moves.push(Move::new(board, from, simple_sq));
+            if simple_sq.rank() == RANK_1 && color == Color::Black
+                || simple_sq.rank() == RANK_8 && color == Color::White
+            {
+                enumerate_promotions(board, color, from, simple_sq, moves);
+            } else {
+                moves.push(Move::new(board, from, simple_sq, None));
+            }
 
             if from.rank() == RANK_2 {
                 let double_sq = Square::new_nocheck(from.file(), RANK_4);
                 if board.get(double_sq).is_none() {
-                    moves.push(Move::new(board, from, double_sq));
+                    moves.push(Move::new(board, from, double_sq, None));
                 }
             }
         }
@@ -94,7 +137,15 @@ fn enumerate_pawn(board: &Board, color: Color, from: Square, moves: &mut Vec<Mov
     for off in captures_off.iter() {
         if let Some(sq) = from.offset(*off) {
             match board.get(sq) {
-                Some(p) if p.color != color => moves.push(Move::new(board, from,sq)),
+                Some(p) if p.color != color => {
+                    if (sq.rank() == RANK_1 && color == Color::Black)
+                        || (sq.rank() == RANK_8 && color == Color::White)
+                    {
+                        enumerate_promotions(board, color, from, sq, moves);
+                    } else {
+                        moves.push(Move::new(board, from, sq, None))
+                    }
+                }
                 _ => {}
             }
         }
@@ -110,7 +161,7 @@ fn enumerate_king(board: &Board, color: Color, from: Square, moves: &mut Vec<Mov
 
             if let Some(sq) = from.offset((i, j)) {
                 if !board.contains_ally(sq, color) {
-                    moves.push(Move::new(board, from, sq));
+                    moves.push(Move::new(board, from, sq, None));
                 }
             }
         }
@@ -129,10 +180,10 @@ fn enumerate_straight_line(
         match board.get(sq) {
             Some(p) if p.color == color => break,
             Some(p) if p.color != color => {
-                moves.push(Move::new(board, from, sq));
+                moves.push(Move::new(board, from, sq, None));
                 break;
             }
-            None => moves.push(Move::new(board, from, sq)),
+            None => moves.push(Move::new(board, from, sq, None)),
             Some(_) => unreachable!(),
         }
         i += 1;
@@ -145,13 +196,7 @@ fn enumerate_queen(board: &Board, color: Color, from: Square, moves: &mut Vec<Mo
             if i == 0 && j == 0 {
                 continue;
             }
-            enumerate_straight_line(
-                board,
-                color,
-                from,
-                moves,
-                (i, j),
-            );
+            enumerate_straight_line(board, color, from, moves, (i, j));
         }
     }
 }
@@ -185,7 +230,7 @@ fn enumerate_knight(board: &Board, color: Color, from: Square, moves: &mut Vec<M
     for off in offsets.iter() {
         if let Some(sq) = from.offset(*off) {
             if !board.contains_ally(sq, color) {
-                moves.push(Move::new(board, from, sq));
+                moves.push(Move::new(board, from, sq, None));
             }
         }
     }

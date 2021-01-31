@@ -90,10 +90,6 @@ fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
     Some(Command::Position(game))
 }
 
-fn is_whitespace(str: &str) -> bool {
-    str.chars().all(|c| c.is_ascii_whitespace())
-}
-
 pub fn parse_command(cmd: &str) -> Option<Command> {
     let mut split = cmd.split_ascii_whitespace();
     match split.next()? {
