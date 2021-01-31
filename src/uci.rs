@@ -41,7 +41,7 @@ fn parse_move(board: &Board, str: &str) -> Option<Move> {
         None => None,
     };
 
-    Some(Move::new(from, to, promotion));
+    Some(Move::new(board, from, to, promotion))
 }
 
 fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {

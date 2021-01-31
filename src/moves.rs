@@ -10,11 +10,11 @@ pub struct Move {
     pub piece: Piece,
     pub capture: Option<Piece>,
     pub promotion: Option<Piece>,
-    // TODO: castling, promotion, en passant, ...
+    // TODO: castling, en passant, ...
 }
 
 impl Move {
-    pub fn new(board: &Board, from: Square, to: Square, promotion: Option<Piece>) -> Self {
+    pub fn new(board: &Board, from: Square, to: Square, promotion: Option<PieceType>) -> Self {
         let piece = board.get(from).expect("the from square is empty");
         let capture = board.get(to);
 
@@ -23,7 +23,7 @@ impl Move {
             to: to,
             piece: piece,
             capture: capture,
-            promotion: promotion,
+            promotion: promotion.map(|typ| Piece::new(typ, piece.color)),
         }
     }
 
@@ -58,10 +58,16 @@ impl Move {
         board.set(self.from, Some(self.piece));
         board.set(self.to, self.capture);
     }
+
+    pub fn is_legal(&self, opponent_moves: &[Move]) -> bool {
+        opponent_moves.iter().all(|m| match m.capture {
+            Some(p) if p.typ == PieceType::King && p.color == self.piece.color => false,
+            _ => true,
+        })
+    }
 }
 
 /// Generate pseudo legal moves
-/// If there is no king, we don't generate any moves (the game is already lost)
 pub fn enumerate_moves(board: &Board, color: Color) -> Vec<Move> {
     let mut moves = Vec::with_capacity(1000);
     let mut has_king = false;
@@ -87,15 +93,11 @@ pub fn enumerate_moves(board: &Board, color: Color) -> Vec<Move> {
     }
 
     if !has_king {
-        moves.clear();
+        unreachable!();
     }
 
     moves
 }
-
-/* pub fn enumerate_legal_moves(board: &mut Board, color: Color) -> Vec<Move> {
-    enumerate_moves(board, color).into_iter().filter(|m| m.is_legal(board)).collect()
-} */
 
 fn enumerate_promotions(
     board: &Board,
@@ -110,8 +112,7 @@ fn enumerate_promotions(
         PieceType::Rook,
         PieceType::Bishop,
     ] {
-        let p = Piece::new(*typ, color);
-        moves.push(Move::new(board, from, to, Some(p)));
+        moves.push(Move::new(board, from, to, Some(*typ)));
     }
 }
 

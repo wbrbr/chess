@@ -17,13 +17,14 @@ pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)>
     let mut best_move = None;
     let mut best_score = i32::MIN;
 
-    for m in moves.iter() {
-
+    for m in moves {
         m.make(&mut board);
-        let sc = minmax(&mut board, color.opposite(), 1, depth) * color.to_int();
-        if sc > best_score {
-            best_move = Some(*m);
-            best_score = sc;
+        let sc_opt = minmax(&mut board, color.opposite(), 1, depth, m);
+        if let Some(sc) = sc_opt {
+            if sc * color.to_int() > best_score {
+                best_move = Some(m);
+                best_score = sc * color.to_int();
+            }
         }
         m.unmake(&mut board);
     }
@@ -52,14 +53,23 @@ impl Line {
     }
 } */
 
-fn minmax(board: &mut Board, color: Color, depth: u32, max_depth: u32) -> i32 {
-
+fn minmax(
+    board: &mut Board,
+    color: Color,
+    depth: u32,
+    max_depth: u32,
+    prev_move: Move,
+) -> Option<i32> {
     if depth == max_depth {
-        evaluate(board, depth)
+        Some(evaluate(board, depth))
     } else {
         // TODO: remove the branches
 
         let moves = enumerate_moves(board, color);
+        if !prev_move.is_legal(&moves) {
+            return None;
+        }
+
         let mut best_score = match color {
             Color::White => -1000000,
             Color::Black => 1000000,
@@ -67,18 +77,25 @@ fn minmax(board: &mut Board, color: Color, depth: u32, max_depth: u32) -> i32 {
 
         for m in moves.iter() {
             m.make(board);
-            let score = minmax(board, color.opposite(), depth+1, max_depth);
-            match color {
-                Color::White => if score > best_score {
-                    best_score = score;
-                }
-                Color::Black => if score < best_score {
-                    best_score = score;
-                }
-            };
+
+            // if None is returned it means that m is illegal so we ignore it (don't update the best score)
+            if let Some(score) = minmax(board, color.opposite(), depth + 1, max_depth, *m) {
+                match color {
+                    Color::White => {
+                        if score > best_score {
+                            best_score = score;
+                        }
+                    }
+                    Color::Black => {
+                        if score < best_score {
+                            best_score = score;
+                        }
+                    }
+                };
+            }
             m.unmake(board);
         }
 
-        best_score
+        Some(best_score)
     }
 }
