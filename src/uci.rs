@@ -2,18 +2,10 @@ use std::str::SplitAsciiWhitespace;
 
 use crate::square::Square;
 use crate::{
-    board::{
-        Board, Color, Piece, PieceType
-    },
+    board::{Board, Color, Piece, PieceType},
     game::Game,
+    moves::Move,
 };
-
-#[derive(Clone, Copy, Debug)]
-struct Move {
-    from: Square,
-    to: Square,
-    promotion: Option<PieceType>,
-}
 
 #[derive(Clone, Debug)]
 pub enum Command {
@@ -29,7 +21,7 @@ pub enum Command {
     Quit,
 }
 
-fn parse_move(str: &str) -> Option<Move> {
+fn parse_move(board: &Board, str: &str) -> Option<Move> {
     let mut chars = str.chars();
 
     let from_file = chars.next()?;
@@ -49,23 +41,7 @@ fn parse_move(str: &str) -> Option<Move> {
         None => None,
     };
 
-    Some(Move {
-        from: from,
-        to: to,
-        promotion: promotion,
-    })
-}
-
-fn exec_move(board: &mut Board, mov: Move) {
-    let orig_piece = board.get(mov.from).expect("received invalid move");
-    board.set(mov.from, None);
-
-    let final_piece = match mov.promotion {
-        Some(typ) => Piece::new(typ, orig_piece.color),
-        None => orig_piece,
-    };
-
-    board.set(mov.to, Some(final_piece));
+    Some(Move::new(from, to, promotion));
 }
 
 fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
@@ -75,14 +51,14 @@ fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
         _ => return None,
     };
 
-
     if let Some(tok) = split.next() {
         if tok != "moves" {
             return None;
         }
 
         for m in split {
-            exec_move(&mut game.board, parse_move(m)?);
+            let mov = parse_move(&game.board, m)?;
+            mov.make(&mut game.board);
             game.player = game.player.opposite();
         }
     }

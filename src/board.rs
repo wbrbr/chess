@@ -1,4 +1,4 @@
-use crate::{moves::enumerate_moves, square::Square};
+use crate::{square::Square};
 
 pub const FILE_A: u8 = 0;
 pub const FILE_B: u8 = 1;
@@ -157,11 +157,6 @@ impl Board {
             _ => false,
         }
     }
-
-    pub fn iter(&self) -> std::slice::Iter<Option<Piece>> {
-        self.board.iter()
-    }
-
 }
 
 #[test]
