@@ -68,28 +68,7 @@ fn exec_move(board: &mut Board, mov: Move) {
     board.set(mov.to, Some(final_piece));
 }
 
-fn parse_position_startpos(split: &mut SplitAsciiWhitespace) -> Option<Command> {
-    let mut color = Color::White;
-    let mut board = Board::starting_board();
-
-    if let Some(tok) = split.next() {
-        if tok != "moves" {
-            return None;
-        }
-
-        for m in split {
-            exec_move(&mut board, parse_move(m)?);
-            color = color.opposite();
-        }
-    }
-
-    Some(Command::Position(Game {
-        board: board,
-        player: color,
-    }))
-}
-
-fn parse_position_fen(split: &mut SplitAsciiWhitespace) -> Option<Command> {
+fn parse_position_fen(split: &mut SplitAsciiWhitespace) -> Option<Game> {
     // it's kind of stupid to make a join here that will be split again later but whatever
     let str = split.fold(String::new(), |acc, x| {
         let mut res = acc;
@@ -100,16 +79,28 @@ fn parse_position_fen(split: &mut SplitAsciiWhitespace) -> Option<Command> {
         res
     });
 
-    let game = Game::from_fen(&str)?;
-    Some(Command::Position(game))
+    Game::from_fen(&str)
 }
 
 fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
-    match split.next()? {
-        "fen" => parse_position_fen(split),
-        "startpos" => parse_position_startpos(split),
+    let mut game = match split.next()? {
+        "fen" => parse_position_fen(split)?,
+        "startpos" => Game::new(),
         _ => return None,
+    };
+
+    if let Some(tok) = split.next() {
+        if tok != "moves" {
+            return None;
+        }
+
+        for m in split {
+            exec_move(&mut game.board, parse_move(m)?);
+            game.player = game.player.opposite();
+        }
     }
+
+    Some(Command::Position(game))
 }
 
 pub fn parse_command(cmd: &str) -> Option<Command> {

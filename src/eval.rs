@@ -11,7 +11,7 @@ fn value(typ: PieceType) -> i32 {
     }
 }
 
-pub fn evaluate(board: &mut Board) -> i32 {
+pub fn evaluate(board: &Board) -> i32 {
 
     // TODO: check
     let mut white_lost = true;

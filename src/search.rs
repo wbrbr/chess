@@ -1,4 +1,4 @@
-use std::cmp::max;
+use std::cmp::{max, min};
 
 use crate::{
     board::{Board, Color},
@@ -14,10 +14,13 @@ pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)>
 
     let mut board = board.clone();
 
+    let old_score = evaluate(&board);
+
     let moves = enumerate_moves(&mut board, color);
 
     let mut best_move = None;
     let mut best_score = i32::MIN;
+    
     for m in moves.iter() {
 
         m.make(&mut board);
@@ -29,7 +32,7 @@ pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)>
         m.unmake(&mut board);
     }
 
-    Some((best_move?, best_score))
+    Some((best_move?, best_score-old_score))
 }
 
 pub fn negamax(board: &mut Board, color: Color, depth: u32) -> i32 {
@@ -37,16 +40,24 @@ pub fn negamax(board: &mut Board, color: Color, depth: u32) -> i32 {
     if depth == 0 {
         evaluate(board)
     } else {
+        // TODO: remove the branches
+
         let moves = enumerate_moves(board, color);
-        let mut max_score = std::i32::MIN;
+        let mut best_score = match color {
+            Color::White => i32::MIN,
+            Color::Black => i32::MAX,
+        };
+
         for m in moves.iter() {
             m.make(board);
-            let score = -negamax(board, color.opposite(), depth - 1);
-            // println!("{}\n", score);
-            max_score = max(max_score, score);
+            let score = negamax(board, color.opposite(), depth - 1);
+            best_score = match color {
+                Color::White => max(best_score, score),
+                Color::Black => min(best_score, score),
+            };
             m.unmake(board);
         }
 
-        max_score
+        best_score
     }
 }
