@@ -1,9 +1,4 @@
-use crate::{
-    board::{Board, Color},
-    eval::evaluate,
-    moves::enumerate_moves,
-    moves::Move,
-};
+use crate::{board::{Board, Color, Piece, PieceType}, eval::evaluate, moves::Move, moves::enumerate_moves};
 
 pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)> {
     if depth == 0 {
@@ -14,22 +9,10 @@ pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)>
 
     let moves = enumerate_moves(&mut board, color);
 
-    let mut best_move = None;
-    let mut best_score = i32::MIN;
+    let (mut best_score, best_m) = minmax(&mut board, color, 0, depth, &moves);
+    best_score *= color.to_int(); 
 
-    for m in moves {
-        m.make(&mut board);
-        let sc_opt = minmax(&mut board, color.opposite(), 1, depth, m);
-        if let Some(sc) = sc_opt {
-            if sc * color.to_int() > best_score {
-                best_move = Some(m);
-                best_score = sc * color.to_int();
-            }
-        }
-        m.unmake(&mut board);
-    }
-
-    Some((best_move?, best_score))
+    Some((best_m?, best_score))
 }
 
 /* struct Line {
@@ -53,49 +36,72 @@ impl Line {
     }
 } */
 
-fn minmax(
-    board: &mut Board,
-    color: Color,
-    depth: u32,
-    max_depth: u32,
-    prev_move: Move,
-) -> Option<i32> {
+fn contains_king_capture(moves: &Vec<Move>) -> bool {
+    moves.iter().any(|m| match m {
+        Move::Normal {
+            capture:
+                Some(Piece {
+                    typ: PieceType::King,
+                    ..
+                }),
+            ..
+        } => true,
+        _ => false,
+    })
+}
+
+fn minmax(board: &mut Board, color: Color, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i32, Option<Move>) {
     if depth == max_depth {
-        Some(evaluate(board, depth))
+        (evaluate(board, depth), None)
     } else {
         // TODO: remove the branches
-
-        let moves = enumerate_moves(board, color);
-        if !prev_move.is_legal(&moves) {
-            return None;
-        }
 
         let mut best_score = match color {
             Color::White => -1000000,
             Color::Black => 1000000,
         };
+        let mut best_m = None;
 
         for m in moves.iter() {
             m.make(board);
 
-            // if None is returned it means that m is illegal so we ignore it (don't update the best score)
-            if let Some(score) = minmax(board, color.opposite(), depth + 1, max_depth, *m) {
-                match color {
-                    Color::White => {
-                        if score > best_score {
-                            best_score = score;
-                        }
-                    }
-                    Color::Black => {
-                        if score < best_score {
-                            best_score = score;
-                        }
-                    }
-                };
+            let opp_moves = enumerate_moves(board, color.opposite());
+
+            // if the opponent has a (pseudo-legal) king capture, it means that
+            // the current move is illegal so we continue
+            if contains_king_capture(&opp_moves) {
+                m.unmake(board);
+                continue;
             }
+
+            let (score, _) = minmax(board, color.opposite(), depth + 1, max_depth, &opp_moves);
+            match color {
+                Color::White => {
+                    if score > best_score {
+                        best_score = score;
+                        best_m = Some(m);
+                    }
+                }
+                Color::Black => {
+                    if score < best_score {
+                        best_score = score;
+                        best_m = Some(m);
+                    }
+                }
+            };
             m.unmake(board);
         }
 
-        Some(best_score)
+        // we have no legal move
+        // this is either a checkmate or a stalemate
+        if !best_m.is_none() {
+            let opp_moves = enumerate_moves(board, color.opposite());
+            if contains_king_capture(&opp_moves) {
+                // do nothing, the initial best_score is good
+            } else {
+                best_score = 0;
+            }
+        }
+        (best_score, best_m.copied())
     }
 }
