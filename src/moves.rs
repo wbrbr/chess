@@ -18,15 +18,6 @@ pub enum Move {
     },
 }
 
-pub fn is_in_check(color: Color, opponent_moves: &[Move]) -> bool {
-    opponent_moves.iter().any(|m| match m {
-        Move::Normal {
-            capture: Some(p), ..
-        } if p.typ == PieceType::King && p.color == color => true,
-        _ => false,
-    })
-}
-
 impl Move {
     pub fn new(board: &Board, from: Square, to: Square, promotion: Option<PieceType>) -> Self {
         let piece = board.get(from).expect("the from square is empty");
@@ -137,25 +128,6 @@ impl Move {
         }
 
         game.player = game.player.opposite();
-    }
-
-    pub fn is_legal(&self, opponent_moves: &[Move]) -> bool {
-        match *self {
-            Move::Normal {
-                from: _,
-                to: _,
-                piece,
-                capture: _,
-                promotion: _,
-            } => !is_in_check(piece.color, opponent_moves),
-            Move::Castling {
-                from: _,
-                to: _,
-                from_rook: _,
-                to_rook: _,
-                color: _,
-            } => false,
-        }
     }
 }
 
