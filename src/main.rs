@@ -38,7 +38,7 @@ fn main() {
             Some(Command::Position(g)) => game = Some(g),
             Some(Command::Go(_)) => {
                 let g = game.as_ref().expect("no position");
-                let (m, score) = best_move(&g.board, g.player, 5).expect("no valid move");
+                let (m, score) = best_move(&g, 5).expect("no valid move");
                 let str = format!("info score cp {}\nbestmove {}\n", score.to_string(), m.to_string());
                 stdout.lock().write_all(str.as_bytes()).unwrap();
             }

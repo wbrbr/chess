@@ -2,7 +2,7 @@ use std::str::SplitAsciiWhitespace;
 
 use crate::{board::{FILE_A, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_8}, square::Square};
 use crate::{
-    board::{Board, Color, Piece, PieceType},
+    board::{Board, Color, PieceType},
     game::Game,
     moves::Move,
 };
@@ -100,8 +100,7 @@ fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
 
         for m in split {
             let mov = parse_move(&game.board, m)?;
-            mov.make(&mut game.board);
-            game.player = game.player.opposite();
+            mov.make(&mut game);
         }
     }
 

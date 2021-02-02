@@ -1,16 +1,16 @@
-use crate::{board::{Board, Color, Piece, PieceType}, eval::evaluate, moves::Move, moves::enumerate_moves};
+use crate::{board::{Color, Piece, PieceType}, eval::evaluate, game::Game, moves::Move, moves::enumerate_moves};
 
-pub fn best_move(board: &Board, color: Color, depth: u32) -> Option<(Move, i32)> {
+pub fn best_move(game: &Game, depth: u32) -> Option<(Move, i32)> {
     if depth == 0 {
         return None;
     }
 
-    let mut board = board.clone();
+    let mut game = game.clone();
 
-    let moves = enumerate_moves(&mut board, color);
+    let moves = enumerate_moves(&mut game);
 
-    let (mut best_score, best_m) = minmax(&mut board, color, 0, depth, &moves);
-    best_score *= color.to_int(); 
+    let (mut best_score, best_m) = minmax(&mut game, 0, depth, &moves);
+    best_score *= game.player.to_int(); 
 
     Some((best_m?, best_score))
 }
@@ -50,32 +50,33 @@ fn contains_king_capture(moves: &Vec<Move>) -> bool {
     })
 }
 
-fn minmax(board: &mut Board, color: Color, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i32, Option<Move>) {
+fn minmax(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i32, Option<Move>) {
     if depth == max_depth {
-        (evaluate(board, depth), None)
+        (evaluate(&game.board, depth), None)
     } else {
         // TODO: remove the branches
 
-        let mut best_score = match color {
+        let mut best_score = match game.player {
             Color::White => -1000000,
             Color::Black => 1000000,
         };
         let mut best_m = None;
 
         for m in moves.iter() {
-            m.make(board);
+            m.make(game);
 
-            let opp_moves = enumerate_moves(board, color.opposite());
+            let opp_moves = enumerate_moves(game);
 
             // if the opponent has a (pseudo-legal) king capture, it means that
             // the current move is illegal so we continue
             if contains_king_capture(&opp_moves) {
-                m.unmake(board);
+                m.unmake(game);
                 continue;
             }
 
-            let (score, _) = minmax(board, color.opposite(), depth + 1, max_depth, &opp_moves);
-            match color {
+            let (score, _) = minmax(game, depth + 1, max_depth, &opp_moves);
+            // we are now game.player.opposite() because m.make(game) changed the current player
+            match game.player.opposite() {
                 Color::White => {
                     if score > best_score {
                         best_score = score;
@@ -89,13 +90,15 @@ fn minmax(board: &mut Board, color: Color, depth: u32, max_depth: u32, moves: &V
                     }
                 }
             };
-            m.unmake(board);
+            m.unmake(game);
         }
 
         // we have no legal move
         // this is either a checkmate or a stalemate
         if best_m.is_none() {
-            let opp_moves = enumerate_moves(board, color.opposite());
+            game.player = game.player.opposite();
+            let opp_moves = enumerate_moves(game);
+            game.player = game.player.opposite();
             if contains_king_capture(&opp_moves) {
                 // do nothing, the initial best_score is good
             } else {

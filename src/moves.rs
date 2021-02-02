@@ -1,7 +1,4 @@
-use crate::{
-    board::{Board, Color, Piece, PieceType, RANK_1, RANK_2, RANK_4, RANK_8},
-    square::Square,
-};
+use crate::{board::{Board, Color, Piece, PieceType, RANK_1, RANK_2, RANK_4, RANK_8}, game::Game, square::Square};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Move {
@@ -78,7 +75,7 @@ impl Move {
     }
 
     // TODO: take game and update castling rights
-    pub fn make(&self, board: &mut Board) {
+    pub fn make(&self, game: &mut Game) {
         match *self {
             Move::Normal {
                 from,
@@ -87,14 +84,14 @@ impl Move {
                 capture,
                 promotion,
             } => {
-                board.set(from, None);
+                game.board.set(from, None);
 
                 let piece = match promotion {
                     Some(x) => x,
                     None => piece,
                 };
 
-                board.set(to, Some(piece));
+                game.board.set(to, Some(piece));
             }
             Move::Castling {
                 from,
@@ -103,15 +100,17 @@ impl Move {
                 to_rook,
                 color,
             } => {
-                board.set(from, None);
-                board.set(from_rook, None);
-                board.set(to, Some(Piece::new(PieceType::King, color)));
-                board.set(to_rook, Some(Piece::new(PieceType::Rook, color)));
+                game.board.set(from, None);
+                game.board.set(from_rook, None);
+                game.board.set(to, Some(Piece::new(PieceType::King, color)));
+                game.board.set(to_rook, Some(Piece::new(PieceType::Rook, color)));
             }
         }
+
+        game.player = game.player.opposite();
     }
 
-    pub fn unmake(&self, board: &mut Board) {
+    pub fn unmake(&self, game: &mut Game) {
         match *self {
             Move::Normal {
                 from,
@@ -120,8 +119,8 @@ impl Move {
                 capture,
                 promotion,
             } => {
-                board.set(from, Some(piece));
-                board.set(to, capture);
+                game.board.set(from, Some(piece));
+                game.board.set(to, capture);
             }
             Move::Castling {
                 from,
@@ -130,12 +129,14 @@ impl Move {
                 to_rook,
                 color,
             } => {
-                board.set(from, Some(Piece::new(PieceType::King, color)));
-                board.set(to, None);
-                board.set(from_rook, Some(Piece::new(PieceType::Rook, color)));
-                board.set(to_rook, None);
+                game.board.set(from, Some(Piece::new(PieceType::King, color)));
+                game.board.set(to, None);
+                game.board.set(from_rook, Some(Piece::new(PieceType::Rook, color)));
+                game.board.set(to_rook, None);
             }
         }
+
+        game.player = game.player.opposite();
     }
 
     pub fn is_legal(&self, opponent_moves: &[Move]) -> bool {
@@ -159,24 +160,24 @@ impl Move {
 }
 
 /// Generate pseudo legal moves
-pub fn enumerate_moves(board: &Board, color: Color) -> Vec<Move> {
+pub fn enumerate_moves(game: &Game) -> Vec<Move> {
     let mut moves = Vec::with_capacity(1000);
     let mut has_king = false;
     for rank in 0..8 {
         for file in 0..8 {
             let sq = Square::new_nocheck(file, rank);
-            if let Some(piece) = board.get(sq) {
-                if piece.color == color {
+            if let Some(piece) = game.board.get(sq) {
+                if piece.color == game.player {
                     match piece.typ {
                         PieceType::King => {
                             has_king = true;
-                            enumerate_king(board, color, sq, &mut moves);
+                            enumerate_king(&game.board, game.player, sq, &mut moves);
                         }
-                        PieceType::Queen => enumerate_queen(board, color, sq, &mut moves),
-                        PieceType::Rook => enumerate_rook(board, color, sq, &mut moves),
-                        PieceType::Bishop => enumerate_bishop(board, color, sq, &mut moves),
-                        PieceType::Knight => enumerate_knight(board, color, sq, &mut moves),
-                        PieceType::Pawn => enumerate_pawn(board, color, sq, &mut moves),
+                        PieceType::Queen => enumerate_queen(&game.board, game.player, sq, &mut moves),
+                        PieceType::Rook => enumerate_rook(&game.board, game.player, sq, &mut moves),
+                        PieceType::Bishop => enumerate_bishop(&game.board, game.player, sq, &mut moves),
+                        PieceType::Knight => enumerate_knight(&game.board, game.player, sq, &mut moves),
+                        PieceType::Pawn => enumerate_pawn(&game.board, game.player, sq, &mut moves),
                     }
                 }
             }
