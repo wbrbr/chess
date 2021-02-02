@@ -94,7 +94,7 @@ fn minmax(board: &mut Board, color: Color, depth: u32, max_depth: u32, moves: &V
 
         // we have no legal move
         // this is either a checkmate or a stalemate
-        if !best_m.is_none() {
+        if best_m.is_none() {
             let opp_moves = enumerate_moves(board, color.opposite());
             if contains_king_capture(&opp_moves) {
                 // do nothing, the initial best_score is good
