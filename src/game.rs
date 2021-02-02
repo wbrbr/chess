@@ -2,10 +2,10 @@ use crate::board::{Board, Color};
 use crate::fen::board_from_fen;
 
 pub type CastlingRights = u8;
-const WhiteQueenside: CastlingRights = 0b0001;
-const BlackQueenside: CastlingRights = 0b0010;
-const WhiteKingside: CastlingRights = 0b0100;
-const BlackKingside: CastlingRights = 0b1000;
+const WHITE_QUEENSIDE: CastlingRights = 0b0001;
+const BLACK_QUEENSIDE: CastlingRights = 0b0010;
+const WHITE_KINGSIDE: CastlingRights = 0b0100;
+const BLACK_KINGSIDE: CastlingRights = 0b1000;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Game {
@@ -31,10 +31,10 @@ impl Game {
         for c in split.next()?.chars() {
             match c {
                 '-' => break,
-                'K' => castling_rights |= WhiteKingside,
-                'Q' => castling_rights |= WhiteQueenside,
-                'k' => castling_rights |= BlackKingside,
-                'q' => castling_rights |= BlackQueenside,
+                'K' => castling_rights |= WHITE_KINGSIDE,
+                'Q' => castling_rights |= WHITE_QUEENSIDE,
+                'k' => castling_rights |= BLACK_KINGSIDE,
+                'q' => castling_rights |= BLACK_QUEENSIDE,
                 _ => return None,
             }
         } 
@@ -75,7 +75,7 @@ fn test_parse_castling_rights() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1";
     assert_eq!(0, Game::from_fen(&mut fen.split_ascii_whitespace()).unwrap().castling_rights);
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kk - 0 1";
-    assert_eq!(BlackKingside | WhiteKingside, Game::from_fen(&mut fen.split_ascii_whitespace()).unwrap().castling_rights);
+    assert_eq!(BLACK_KINGSIDE | WHITE_KINGSIDE, Game::from_fen(&mut fen.split_ascii_whitespace()).unwrap().castling_rights);
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    assert_eq!(WhiteQueenside | BlackQueenside | BlackKingside | WhiteKingside, Game::from_fen(&mut fen.split_ascii_whitespace()).unwrap().castling_rights);
+    assert_eq!(WHITE_QUEENSIDE | BLACK_QUEENSIDE | BLACK_KINGSIDE | WHITE_KINGSIDE, Game::from_fen(&mut fen.split_ascii_whitespace()).unwrap().castling_rights);
 }
