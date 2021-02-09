@@ -112,3 +112,53 @@ fn minmax(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i3
         (best_score, best_m.copied())
     }
 }
+
+pub fn perft(depth: u32) -> u32 {
+    let mut game = Game::new();
+
+    let moves = enumerate_moves(&game);
+
+    perft_rec(&mut game, 0, depth, &moves)
+}
+
+fn perft_rec(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> u32 {
+    if depth == max_depth {
+        1
+    } else {
+        let mut n = 0;
+
+        'lop: for m in moves {
+            m.make(game);
+
+            let opp_moves = enumerate_moves(game);
+
+            if contains_king_capture(&opp_moves) {
+                m.unmake(game);
+                continue;
+            }
+
+            if let Move::Castling { from, to, ..} = m {
+                assert_eq!(from.rank(), to.rank());
+                let min_file = min(from.file(), to.file());
+                let max_file = max(from.file(), to.file());
+
+                for f in min_file..max_file {
+                    if square_is_threatened(Square::new_nocheck(f, from.rank()), &opp_moves) {
+                        m.unmake(game);
+                        continue 'lop;
+                    }
+                }
+            }
+
+            let x = perft_rec(game, depth+1, max_depth, &opp_moves);
+            if depth == 0 {
+                println!("{}: {}", m.to_string(), x);
+            }
+
+            n += x;
+
+            m.unmake(game);
+        }
+        n
+    }
+}

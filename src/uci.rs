@@ -1,5 +1,7 @@
 use std::str::SplitAsciiWhitespace;
 
+use rayon::iter::Split;
+
 use crate::{board::{FILE_A, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_8}, square::Square};
 use crate::{
     board::{Color, PieceType},
@@ -15,6 +17,7 @@ pub enum Command {
     Position(Game),
     Go(String), // TODO: something better
     Quit,
+    Perft(u32),
 }
 
 fn parse_move(game: &Game, str: &str) -> Option<Move> {
@@ -107,13 +110,23 @@ fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
     Some(Command::Position(game))
 }
 
+fn parse_go(split: &mut SplitAsciiWhitespace) -> Option<Command> {
+    match split.next() {
+        Some("perft") => {
+            let depth = split.next()?.parse().ok()?;
+            Some(Command::Perft(depth))
+        },
+        _ => Some(Command::Go("".to_owned())),
+    }
+}
+
 pub fn parse_command(cmd: &str) -> Option<Command> {
     let mut split = cmd.split_ascii_whitespace();
     match split.next()? {
         "uci" => Some(Command::Uci),
         "isready" => Some(Command::IsReady),
         "ucinewgame" => Some(Command::NewGame),
-        "go" => Some(Command::Go("".to_owned())),
+        "go" => parse_go(&mut split),
         "quit" => Some(Command::Quit),
         "position" => parse_position(&mut split),
         _ => None,

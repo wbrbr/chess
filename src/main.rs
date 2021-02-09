@@ -12,7 +12,7 @@ use std::{
     io::{BufRead, Write},
 };
 
-use search::best_move;
+use search::{best_move, perft};
 use uci::{parse_command, Command};
 
 fn main() {
@@ -46,7 +46,11 @@ fn main() {
                 );
                 stdout.lock().write_all(str.as_bytes()).unwrap();
             }
-            _ => {}
+            Some(Command::Perft(depth)) => {
+                println!("{}", perft(depth));
+            }
+            Some(Command::NewGame) => {}
+            None => {}
         }
     }
 }
