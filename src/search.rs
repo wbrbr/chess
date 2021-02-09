@@ -1,4 +1,7 @@
-use crate::{board::{Color, Piece, PieceType}, eval::evaluate, game::Game, moves::Move, moves::enumerate_moves};
+use std::cmp::{max, min};
+
+use crate::{board::{Color, Piece, PieceType}, eval::evaluate, game::Game, moves::Move, moves::enumerate_moves, square::Square};
+use crate::board::{RANK_6, FILE_E, FILE_G};
 
 pub fn best_move(game: &Game, depth: u32) -> Option<(Move, i32)> {
     if depth == 0 {
@@ -10,6 +13,7 @@ pub fn best_move(game: &Game, depth: u32) -> Option<(Move, i32)> {
     let moves = enumerate_moves(&mut game);
 
     let (mut best_score, best_m) = minmax(&mut game, 0, depth, &moves);
+    println!("{}", best_score);
     best_score *= game.player.to_int(); 
 
     Some((best_m?, best_score))
@@ -50,6 +54,15 @@ fn contains_king_capture(moves: &Vec<Move>) -> bool {
     })
 }
 
+fn square_is_threatened(square: Square, moves: &Vec<Move>) -> bool {
+    moves.iter().any(|m| match m {
+        Move::Normal {
+            to: sq, ..
+        } if *sq == square => true,
+        _ => false,
+    })
+}
+
 fn minmax(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i32, Option<Move>) {
     if depth == max_depth {
         (evaluate(&game.board, depth), None)
@@ -62,7 +75,7 @@ fn minmax(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i3
         };
         let mut best_m = None;
 
-        for m in moves.iter() {
+        'lop: for m in moves.iter() {
             m.make(game);
 
             let opp_moves = enumerate_moves(game);
@@ -74,7 +87,21 @@ fn minmax(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i3
                 continue;
             }
 
+            if let Move::Castling { from, to, ..} = m {
+                assert_eq!(from.rank(), to.rank());
+                let min_file = min(from.file(), to.file());
+                let max_file = max(from.file(), to.file());
+
+                for f in min_file..max_file {
+                    if square_is_threatened(Square::new_nocheck(f, from.rank()), &opp_moves) {
+                        m.unmake(game);
+                        continue 'lop;
+                    }
+                }
+            }
+
             let (score, _) = minmax(game, depth + 1, max_depth, &opp_moves);
+
             // we are now game.player.opposite() because m.make(game) changed the current player
             match game.player.opposite() {
                 Color::White => {

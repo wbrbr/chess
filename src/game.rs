@@ -2,10 +2,10 @@ use crate::board::{Board, Color};
 use crate::fen::board_from_fen;
 
 pub type CastlingRights = u8;
-const WHITE_QUEENSIDE: CastlingRights = 0b0001;
-const BLACK_QUEENSIDE: CastlingRights = 0b0010;
-const WHITE_KINGSIDE: CastlingRights = 0b0100;
-const BLACK_KINGSIDE: CastlingRights = 0b1000;
+pub const WHITE_QUEENSIDE: CastlingRights = 0b0001;
+pub const BLACK_QUEENSIDE: CastlingRights = 0b0010;
+pub const WHITE_KINGSIDE: CastlingRights = 0b0100;
+pub const BLACK_KINGSIDE: CastlingRights = 0b1000;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Game {

@@ -21,7 +21,7 @@ pub enum Command {
     Quit,
 }
 
-fn parse_move(board: &Board, str: &str) -> Option<Move> {
+fn parse_move(game: &Game, str: &str) -> Option<Move> {
     let mut chars = str.chars();
 
     let from_file = chars.next()?;
@@ -32,7 +32,7 @@ fn parse_move(board: &Board, str: &str) -> Option<Move> {
     let to_rank = chars.next()?;
     let to = Square::from_chars(to_file, to_rank)?;
 
-    if board.get(from)?.typ == PieceType::King {
+    if game.board.get(from)?.typ == PieceType::King {
         match (from, to) {
             (Square(FILE_E, RANK_1), Square(FILE_G, RANK_1)) => {
                 return Some(Move::Castling {
@@ -41,6 +41,7 @@ fn parse_move(board: &Board, str: &str) -> Option<Move> {
                     from_rook: Square::new_nocheck(FILE_H, RANK_1),
                     to_rook: Square::new_nocheck(FILE_F, RANK_1),
                     color: Color::White,
+                    castling_rights: game.castling_rights,
                 })
             },
             (Square(FILE_E, RANK_1), Square(FILE_C, RANK_1)) => {
@@ -50,6 +51,7 @@ fn parse_move(board: &Board, str: &str) -> Option<Move> {
                     from_rook: Square::new_nocheck(FILE_A, RANK_1),
                     to_rook: Square::new_nocheck(FILE_D, RANK_1),
                     color: Color::White,
+                    castling_rights: game.castling_rights,
                 })
             },
             (Square(FILE_E, RANK_8), Square(FILE_C, RANK_8)) => {
@@ -59,6 +61,7 @@ fn parse_move(board: &Board, str: &str) -> Option<Move> {
                     from_rook: Square::new_nocheck(FILE_A, RANK_8),
                     to_rook: Square::new_nocheck(FILE_D, RANK_8),
                     color: Color::Black,
+                    castling_rights: game.castling_rights,
                 })
             },
             (Square(FILE_E, RANK_8), Square(FILE_G, RANK_8)) => {
@@ -68,6 +71,7 @@ fn parse_move(board: &Board, str: &str) -> Option<Move> {
                     from_rook: Square::new_nocheck(FILE_H, RANK_8),
                     to_rook: Square::new_nocheck(FILE_F, RANK_8),
                     color: Color::Black,
+                    castling_rights: game.castling_rights,
                 })
             }
             _ => {},
@@ -83,7 +87,7 @@ fn parse_move(board: &Board, str: &str) -> Option<Move> {
         None => None,
     };
 
-    Some(Move::new(board, from, to, promotion))
+    Some(Move::new(game, from, to, promotion))
 }
 
 fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
@@ -99,7 +103,7 @@ fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
         }
 
         for m in split {
-            let mov = parse_move(&game.board, m)?;
+            let mov = parse_move(&game, m)?;
             mov.make(&mut game);
         }
     }

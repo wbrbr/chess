@@ -48,6 +48,13 @@ impl Color {
             Color::Black => -1,
         }
     }
+
+    pub fn to_string(&self) -> &'static str {
+        match *self {
+            Color::White => "White",
+            Color::Black => "Black",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

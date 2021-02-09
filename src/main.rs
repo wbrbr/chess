@@ -1,11 +1,11 @@
 mod board;
+mod eval;
+mod fen;
+mod game;
 mod moves;
+mod search;
 mod square;
 mod uci;
-mod eval;
-mod search;
-mod game;
-mod fen;
 
 use std::{
     fs::File,
@@ -38,8 +38,12 @@ fn main() {
             Some(Command::Position(g)) => game = Some(g),
             Some(Command::Go(_)) => {
                 let g = game.as_ref().expect("no position");
-                let (m, score) = best_move(&g, 5).expect("no valid move");
-                let str = format!("info score cp {}\nbestmove {}\n", score.to_string(), m.to_string());
+                let (m, score) = best_move(&g, 6).expect("no valid move");
+                let str = format!(
+                    "info score cp {}\nbestmove {}\n",
+                    score.to_string(),
+                    m.to_string()
+                );
                 stdout.lock().write_all(str.as_bytes()).unwrap();
             }
             _ => {}

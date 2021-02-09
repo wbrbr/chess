@@ -1,4 +1,13 @@
-use crate::{board::{Board, Color, Piece, PieceType, RANK_1, RANK_2, RANK_4, RANK_8}, game::Game, square::Square};
+use crate::{
+    board::{
+        Color, Piece, PieceType, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H,
+        RANK_1, RANK_2, RANK_4, RANK_8,
+    },
+    game::{
+        CastlingRights, Game, BLACK_KINGSIDE, BLACK_QUEENSIDE, WHITE_KINGSIDE, WHITE_QUEENSIDE,
+    },
+    square::Square,
+};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Move {
@@ -8,6 +17,7 @@ pub enum Move {
         piece: Piece,
         capture: Option<Piece>,
         promotion: Option<Piece>,
+        castling_rights: CastlingRights,
     },
     Castling {
         from: Square,
@@ -15,13 +25,14 @@ pub enum Move {
         from_rook: Square,
         to_rook: Square,
         color: Color,
+        castling_rights: CastlingRights,
     },
 }
 
 impl Move {
-    pub fn new(board: &Board, from: Square, to: Square, promotion: Option<PieceType>) -> Self {
-        let piece = board.get(from).expect("the from square is empty");
-        let capture = board.get(to);
+    pub fn new(game: &Game, from: Square, to: Square, promotion: Option<PieceType>) -> Self {
+        let piece = game.board.get(from).expect("the from square is empty");
+        let capture = game.board.get(to);
 
         Move::Normal {
             from: from,
@@ -29,6 +40,7 @@ impl Move {
             piece: piece,
             capture: capture,
             promotion: promotion.map(|typ| Piece::new(typ, piece.color)),
+            castling_rights: game.castling_rights,
         }
     }
 
@@ -40,6 +52,7 @@ impl Move {
                 piece,
                 capture,
                 promotion,
+                castling_rights,
             } => {
                 let mut res: String = from.to_string() + &to.to_string();
 
@@ -61,6 +74,7 @@ impl Move {
                 from_rook,
                 to_rook,
                 color,
+                castling_rights,
             } => from.to_string() + &to.to_string(),
         }
     }
@@ -74,7 +88,35 @@ impl Move {
                 piece,
                 capture,
                 promotion,
+                castling_rights,
             } => {
+                match piece {
+                    Piece {
+                        typ: PieceType::King,
+                        color: Color::White,
+                    } => game.castling_rights &= !(WHITE_QUEENSIDE | WHITE_KINGSIDE),
+                    Piece {
+                        typ: PieceType::King,
+                        color: Color::Black,
+                    } => game.castling_rights &= !(BLACK_QUEENSIDE | BLACK_KINGSIDE),
+                    Piece {
+                        typ: PieceType::Rook,
+                        color: Color::Black,
+                    } => match from {
+                        Square(FILE_A, RANK_8) => game.castling_rights &= !BLACK_QUEENSIDE,
+                        Square(FILE_H, RANK_8) => game.castling_rights &= !BLACK_KINGSIDE,
+                        _ => {}
+                    },
+                    Piece {
+                        typ: PieceType::Rook,
+                        color: Color::White,
+                    } => match from {
+                        Square(FILE_A, RANK_1) => game.castling_rights &= !WHITE_QUEENSIDE,
+                        Square(FILE_H, RANK_1) => game.castling_rights &= !WHITE_KINGSIDE,
+                        _ => {}
+                    },
+                    _ => {}
+                }
                 game.board.set(from, None);
 
                 let piece = match promotion {
@@ -90,11 +132,17 @@ impl Move {
                 from_rook,
                 to_rook,
                 color,
+                castling_rights,
             } => {
+                match color {
+                    Color::White => game.castling_rights &= !(WHITE_QUEENSIDE | WHITE_KINGSIDE),
+                    Color::Black => game.castling_rights &= !(BLACK_QUEENSIDE | BLACK_KINGSIDE),
+                }
                 game.board.set(from, None);
                 game.board.set(from_rook, None);
                 game.board.set(to, Some(Piece::new(PieceType::King, color)));
-                game.board.set(to_rook, Some(Piece::new(PieceType::Rook, color)));
+                game.board
+                    .set(to_rook, Some(Piece::new(PieceType::Rook, color)));
             }
         }
 
@@ -109,7 +157,9 @@ impl Move {
                 piece,
                 capture,
                 promotion,
+                castling_rights,
             } => {
+                game.castling_rights = castling_rights;
                 game.board.set(from, Some(piece));
                 game.board.set(to, capture);
             }
@@ -119,10 +169,14 @@ impl Move {
                 from_rook,
                 to_rook,
                 color,
+                castling_rights,
             } => {
-                game.board.set(from, Some(Piece::new(PieceType::King, color)));
+                game.castling_rights = castling_rights;
+                game.board
+                    .set(from, Some(Piece::new(PieceType::King, color)));
                 game.board.set(to, None);
-                game.board.set(from_rook, Some(Piece::new(PieceType::Rook, color)));
+                game.board
+                    .set(from_rook, Some(Piece::new(PieceType::Rook, color)));
                 game.board.set(to_rook, None);
             }
         }
@@ -143,28 +197,121 @@ pub fn enumerate_moves(game: &Game) -> Vec<Move> {
                     match piece.typ {
                         PieceType::King => {
                             has_king = true;
-                            enumerate_king(&game.board, game.player, sq, &mut moves);
+                            enumerate_king(game, game.player, sq, &mut moves);
                         }
-                        PieceType::Queen => enumerate_queen(&game.board, game.player, sq, &mut moves),
-                        PieceType::Rook => enumerate_rook(&game.board, game.player, sq, &mut moves),
-                        PieceType::Bishop => enumerate_bishop(&game.board, game.player, sq, &mut moves),
-                        PieceType::Knight => enumerate_knight(&game.board, game.player, sq, &mut moves),
-                        PieceType::Pawn => enumerate_pawn(&game.board, game.player, sq, &mut moves),
+                        PieceType::Queen => enumerate_queen(game, game.player, sq, &mut moves),
+                        PieceType::Rook => enumerate_rook(game, game.player, sq, &mut moves),
+                        PieceType::Bishop => enumerate_bishop(game, game.player, sq, &mut moves),
+                        PieceType::Knight => enumerate_knight(game, game.player, sq, &mut moves),
+                        PieceType::Pawn => enumerate_pawn(game, game.player, sq, &mut moves),
                     }
                 }
             }
         }
     }
 
+    enumerate_castlings(game, &mut moves);
+
     if !has_king {
+        eprintln!("{} has no king: {}", game.player.to_string(), game.board.to_fen());
         unreachable!();
     }
 
     moves
 }
 
+fn enumerate_castlings(game: &Game, moves: &mut Vec<Move>) {
+    if game.castling_rights | WHITE_QUEENSIDE != 0
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_B, RANK_1))
+            .is_none()
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_C, RANK_1))
+            .is_none()
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_D, RANK_1))
+            .is_none()
+    {
+        moves.push(Move::Castling {
+            from: Square::new_nocheck(FILE_E, RANK_1),
+            to: Square::new_nocheck(FILE_C, RANK_1),
+            from_rook: Square::new_nocheck(FILE_A, RANK_1),
+            to_rook: Square::new_nocheck(FILE_D, RANK_1),
+            color: Color::White,
+            castling_rights: game.castling_rights,
+        });
+    }
+
+    if game.castling_rights | WHITE_KINGSIDE != 0
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_F, RANK_1))
+            .is_none()
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_G, RANK_1))
+            .is_none()
+    {
+        moves.push(Move::Castling {
+            from: Square::new_nocheck(FILE_E, RANK_1),
+            to: Square::new_nocheck(FILE_G, RANK_1),
+            from_rook: Square::new_nocheck(FILE_H, RANK_1),
+            to_rook: Square::new_nocheck(FILE_F, RANK_1),
+            color: Color::White,
+            castling_rights: game.castling_rights,
+        });
+    }
+
+    if game.castling_rights | BLACK_QUEENSIDE != 0
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_B, RANK_8))
+            .is_none()
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_C, RANK_8))
+            .is_none()
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_D, RANK_8))
+            .is_none()
+    {
+        moves.push(Move::Castling {
+            from: Square::new_nocheck(FILE_E, RANK_8),
+            to: Square::new_nocheck(FILE_C, RANK_8),
+            from_rook: Square::new_nocheck(FILE_A, RANK_8),
+            to_rook: Square::new_nocheck(FILE_D, RANK_8),
+            color: Color::Black,
+            castling_rights: game.castling_rights,
+        });
+    }
+
+    if game.castling_rights | BLACK_KINGSIDE != 0
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_F, RANK_8))
+            .is_none()
+        && game
+            .board
+            .get(Square::new_nocheck(FILE_G, RANK_8))
+            .is_none()
+    {
+        moves.push(Move::Castling {
+            from: Square::new_nocheck(FILE_E, RANK_1),
+            to: Square::new_nocheck(FILE_G, RANK_1),
+            from_rook: Square::new_nocheck(FILE_H, RANK_8),
+            to_rook: Square::new_nocheck(FILE_F, RANK_8),
+            color: Color::Black,
+            castling_rights: game.castling_rights,
+        });
+    }
+}
+
 fn enumerate_promotions(
-    board: &Board,
+    game: &Game,
     color: Color,
     from: Square,
     to: Square,
@@ -176,11 +323,11 @@ fn enumerate_promotions(
         PieceType::Rook,
         PieceType::Bishop,
     ] {
-        moves.push(Move::new(board, from, to, Some(*typ)));
+        moves.push(Move::new(game, from, to, Some(*typ)));
     }
 }
 
-fn enumerate_pawn(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+fn enumerate_pawn(game: &Game, color: Color, from: Square, moves: &mut Vec<Move>) {
     let off_rank = match color {
         Color::White => 1,
         Color::Black => -1,
@@ -189,19 +336,19 @@ fn enumerate_pawn(board: &Board, color: Color, from: Square, moves: &mut Vec<Mov
     let simple = (0, off_rank);
 
     if let Some(simple_sq) = from.offset(simple) {
-        if board.get(simple_sq).is_none() {
+        if game.board.get(simple_sq).is_none() {
             if simple_sq.rank() == RANK_1 && color == Color::Black
                 || simple_sq.rank() == RANK_8 && color == Color::White
             {
-                enumerate_promotions(board, color, from, simple_sq, moves);
+                enumerate_promotions(game, color, from, simple_sq, moves);
             } else {
-                moves.push(Move::new(board, from, simple_sq, None));
+                moves.push(Move::new(game, from, simple_sq, None));
             }
 
             if from.rank() == RANK_2 {
                 let double_sq = Square::new_nocheck(from.file(), RANK_4);
-                if board.get(double_sq).is_none() {
-                    moves.push(Move::new(board, from, double_sq, None));
+                if game.board.get(double_sq).is_none() {
+                    moves.push(Move::new(game, from, double_sq, None));
                 }
             }
         }
@@ -210,14 +357,14 @@ fn enumerate_pawn(board: &Board, color: Color, from: Square, moves: &mut Vec<Mov
     let captures_off = [(-1, off_rank), (1, off_rank)];
     for off in captures_off.iter() {
         if let Some(sq) = from.offset(*off) {
-            match board.get(sq) {
+            match game.board.get(sq) {
                 Some(p) if p.color != color => {
                     if (sq.rank() == RANK_1 && color == Color::Black)
                         || (sq.rank() == RANK_8 && color == Color::White)
                     {
-                        enumerate_promotions(board, color, from, sq, moves);
+                        enumerate_promotions(game, color, from, sq, moves);
                     } else {
-                        moves.push(Move::new(board, from, sq, None))
+                        moves.push(Move::new(game, from, sq, None))
                     }
                 }
                 _ => {}
@@ -226,7 +373,7 @@ fn enumerate_pawn(board: &Board, color: Color, from: Square, moves: &mut Vec<Mov
     }
 }
 
-fn enumerate_king(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+fn enumerate_king(game: &Game, color: Color, from: Square, moves: &mut Vec<Move>) {
     for i in -1..=1 {
         for j in -1..=1 {
             if i == 0 && j == 0 {
@@ -234,8 +381,8 @@ fn enumerate_king(board: &Board, color: Color, from: Square, moves: &mut Vec<Mov
             }
 
             if let Some(sq) = from.offset((i, j)) {
-                if !board.contains_ally(sq, color) {
-                    moves.push(Move::new(board, from, sq, None));
+                if !game.board.contains_ally(sq, color) {
+                    moves.push(Move::new(game, from, sq, None));
                 }
             }
         }
@@ -243,7 +390,7 @@ fn enumerate_king(board: &Board, color: Color, from: Square, moves: &mut Vec<Mov
 }
 
 fn enumerate_straight_line(
-    board: &Board,
+    game: &Game,
     color: Color,
     from: Square,
     moves: &mut Vec<Move>,
@@ -251,45 +398,45 @@ fn enumerate_straight_line(
 ) {
     let mut i = 1i8;
     while let Some(sq) = from.offset((i * dir.0, i * dir.1)) {
-        match board.get(sq) {
+        match game.board.get(sq) {
             Some(p) if p.color == color => break,
             Some(p) if p.color != color => {
-                moves.push(Move::new(board, from, sq, None));
+                moves.push(Move::new(game, from, sq, None));
                 break;
             }
-            None => moves.push(Move::new(board, from, sq, None)),
+            None => moves.push(Move::new(game, from, sq, None)),
             Some(_) => unreachable!(),
         }
         i += 1;
     }
 }
 
-fn enumerate_queen(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+fn enumerate_queen(game: &Game, color: Color, from: Square, moves: &mut Vec<Move>) {
     for i in -1..=1 {
         for j in -1..=1 {
             if i == 0 && j == 0 {
                 continue;
             }
-            enumerate_straight_line(board, color, from, moves, (i, j));
+            enumerate_straight_line(game, color, from, moves, (i, j));
         }
     }
 }
 
-fn enumerate_rook(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
-    enumerate_straight_line(board, color, from, moves, (-1, 0));
-    enumerate_straight_line(board, color, from, moves, (1, 0));
-    enumerate_straight_line(board, color, from, moves, (0, -1));
-    enumerate_straight_line(board, color, from, moves, (0, 1));
+fn enumerate_rook(game: &Game, color: Color, from: Square, moves: &mut Vec<Move>) {
+    enumerate_straight_line(game, color, from, moves, (-1, 0));
+    enumerate_straight_line(game, color, from, moves, (1, 0));
+    enumerate_straight_line(game, color, from, moves, (0, -1));
+    enumerate_straight_line(game, color, from, moves, (0, 1));
 }
 
-fn enumerate_bishop(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
-    enumerate_straight_line(board, color, from, moves, (-1, -1));
-    enumerate_straight_line(board, color, from, moves, (-1, 1));
-    enumerate_straight_line(board, color, from, moves, (1, -1));
-    enumerate_straight_line(board, color, from, moves, (1, 1));
+fn enumerate_bishop(game: &Game, color: Color, from: Square, moves: &mut Vec<Move>) {
+    enumerate_straight_line(game, color, from, moves, (-1, -1));
+    enumerate_straight_line(game, color, from, moves, (-1, 1));
+    enumerate_straight_line(game, color, from, moves, (1, -1));
+    enumerate_straight_line(game, color, from, moves, (1, 1));
 }
 
-fn enumerate_knight(board: &Board, color: Color, from: Square, moves: &mut Vec<Move>) {
+fn enumerate_knight(game: &Game, color: Color, from: Square, moves: &mut Vec<Move>) {
     let offsets = [
         (-2, -1),
         (-2, 1),
@@ -303,8 +450,8 @@ fn enumerate_knight(board: &Board, color: Color, from: Square, moves: &mut Vec<M
 
     for off in offsets.iter() {
         if let Some(sq) = from.offset(*off) {
-            if !board.contains_ally(sq, color) {
-                moves.push(Move::new(board, from, sq, None));
+            if !game.board.contains_ally(sq, color) {
+                moves.push(Move::new(game, from, sq, None));
             }
         }
     }
