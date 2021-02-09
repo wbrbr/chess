@@ -49,10 +49,10 @@ impl Move {
             Move::Normal {
                 from,
                 to,
-                piece,
-                capture,
+                piece: _,
+                capture: _,
                 promotion,
-                castling_rights,
+                castling_rights: _,
             } => {
                 let mut res: String = from.to_string() + &to.to_string();
 
@@ -71,10 +71,10 @@ impl Move {
             Move::Castling {
                 from,
                 to,
-                from_rook,
-                to_rook,
-                color,
-                castling_rights,
+                from_rook: _,
+                to_rook: _,
+                color: _,
+                castling_rights: _,
             } => from.to_string() + &to.to_string(),
         }
     }
@@ -86,9 +86,9 @@ impl Move {
                 from,
                 to,
                 piece,
-                capture,
+                capture: _,
                 promotion,
-                castling_rights,
+                castling_rights: _,
             } => {
                 match piece {
                     Piece {
@@ -132,7 +132,7 @@ impl Move {
                 from_rook,
                 to_rook,
                 color,
-                castling_rights,
+                castling_rights: _,
             } => {
                 match color {
                     Color::White => game.castling_rights &= !(WHITE_QUEENSIDE | WHITE_KINGSIDE),
@@ -156,7 +156,7 @@ impl Move {
                 to,
                 piece,
                 capture,
-                promotion,
+                promotion: _,
                 castling_rights,
             } => {
                 game.castling_rights = castling_rights;
@@ -312,7 +312,6 @@ fn enumerate_castlings(game: &Game, moves: &mut Vec<Move>) {
 
 fn enumerate_promotions(
     game: &Game,
-    color: Color,
     from: Square,
     to: Square,
     moves: &mut Vec<Move>,
@@ -340,7 +339,7 @@ fn enumerate_pawn(game: &Game, color: Color, from: Square, moves: &mut Vec<Move>
             if simple_sq.rank() == RANK_1 && color == Color::Black
                 || simple_sq.rank() == RANK_8 && color == Color::White
             {
-                enumerate_promotions(game, color, from, simple_sq, moves);
+                enumerate_promotions(game, from, simple_sq, moves);
             } else {
                 moves.push(Move::new(game, from, simple_sq, None));
             }
@@ -362,7 +361,7 @@ fn enumerate_pawn(game: &Game, color: Color, from: Square, moves: &mut Vec<Move>
                     if (sq.rank() == RANK_1 && color == Color::Black)
                         || (sq.rank() == RANK_8 && color == Color::White)
                     {
-                        enumerate_promotions(game, color, from, sq, moves);
+                        enumerate_promotions(game, from, sq, moves);
                     } else {
                         moves.push(Move::new(game, from, sq, None))
                     }

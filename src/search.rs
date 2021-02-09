@@ -1,7 +1,6 @@
 use std::cmp::{max, min};
 
 use crate::{board::{Color, Piece, PieceType}, eval::evaluate, game::Game, moves::Move, moves::enumerate_moves, square::Square};
-use crate::board::{RANK_6, FILE_E, FILE_G};
 
 pub fn best_move(game: &Game, depth: u32) -> Option<(Move, i32)> {
     if depth == 0 {
@@ -13,32 +12,10 @@ pub fn best_move(game: &Game, depth: u32) -> Option<(Move, i32)> {
     let moves = enumerate_moves(&mut game);
 
     let (mut best_score, best_m) = minmax(&mut game, 0, depth, &moves);
-    println!("{}", best_score);
     best_score *= game.player.to_int(); 
 
     Some((best_m?, best_score))
 }
-
-/* struct Line {
-    length: usize,
-    data: [Option<Move>; 10],
-}
-
-impl Line {
-    pub fn new() -> Self {
-        Line {
-            length: 0,
-            data: [None; 10],
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        self.data.iter().fold(String::new(), |acc, x| match x {
-            None => acc,
-            Some(m) => acc + m.to_string().as_ref() + " ",
-        })
-    }
-} */
 
 fn contains_king_capture(moves: &Vec<Move>) -> bool {
     moves.iter().any(|m| match m {

@@ -2,7 +2,7 @@ use std::str::SplitAsciiWhitespace;
 
 use crate::{board::{FILE_A, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_8}, square::Square};
 use crate::{
-    board::{Board, Color, PieceType},
+    board::{Color, PieceType},
     game::Game,
     moves::Move,
 };
@@ -10,14 +10,10 @@ use crate::{
 #[derive(Clone, Debug)]
 pub enum Command {
     Uci,
-    Debug(bool),
     IsReady,
-    //SetOption()
     NewGame,
     Position(Game),
     Go(String), // TODO: something better
-    Stop,
-    PonderHit,
     Quit,
 }
 
@@ -128,15 +124,6 @@ pub fn parse_command(cmd: &str) -> Option<Command> {
 fn parse_position1() {
     parse_command("position startpos moves e2e4").unwrap();
 }
-
-enum Response {
-    IdName(String),
-    IdAuthor(String),
-    UciOk,
-    ReadyOk,
-    BestMove(Move),
-}
-
 
 #[test]
 fn test_parse_castling() {
