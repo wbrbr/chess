@@ -1,7 +1,5 @@
 use std::str::SplitAsciiWhitespace;
 
-use rayon::iter::Split;
-
 use crate::{board::{FILE_A, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_8}, square::Square};
 use crate::{
     board::{Color, PieceType},
