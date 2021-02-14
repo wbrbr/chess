@@ -27,7 +27,7 @@ fn ranki<I>(chars: &mut Peekable<I>, rank: u8, board: &mut Board) -> Option<()>
 where
     I: Iterator<Item = char>,
 {
-    let mut file = 0;
+    let mut file = 0u8;
     loop {
         match chars.next() {
             None | Some('/') => break,
@@ -36,11 +36,11 @@ where
                 if digit == 0 || digit > 8 {
                     return None;
                 }
-                file += digit;
+                file += digit as u8;
             }
             Some(c) => {
                 if let Some(p) = piece(c) {
-                    let sq = Square::new(file as u8, rank as u8)?;
+                    let sq = rank * 8 + file;
                     board.set(sq, Some(p));
                     file += 1;
                 }
@@ -60,7 +60,7 @@ where
 {
     let mut rank = 7u8;
 
-    let mut board = Board { board: [None; 64] };
+    let mut board = Board::empty();
 
     loop {
         ranki(chars, rank, &mut board)?;
@@ -78,5 +78,5 @@ where
 #[test]
 fn test_parse_board_start() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-    assert_eq!(Board::starting_board(), board_from_fen(&mut fen.chars().peekable()).unwrap());
+    assert_eq!(Board::new(), board_from_fen(&mut fen.chars().peekable()).unwrap());
 }

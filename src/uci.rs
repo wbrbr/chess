@@ -1,7 +1,8 @@
 use std::str::SplitAsciiWhitespace;
 
-use crate::{board::{FILE_A, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_8}, square::Square};
+use crate::square::square_from_chars;
 use crate::{
+    bitboard,
     board::{Color, PieceType},
     game::Game,
     moves::Move,
@@ -23,55 +24,55 @@ fn parse_move(game: &Game, str: &str) -> Option<Move> {
 
     let from_file = chars.next()?;
     let from_rank = chars.next()?;
-    let from = Square::from_chars(from_file, from_rank)?;
+    let from = square_from_chars(from_file, from_rank)?;
 
     let to_file = chars.next()?;
     let to_rank = chars.next()?;
-    let to = Square::from_chars(to_file, to_rank)?;
+    let to = square_from_chars(to_file, to_rank)?;
 
-    if game.board.get(from)?.typ == PieceType::King {
+    if game.board.white_king & (1 << from) != 0 {
         match (from, to) {
-            (Square(FILE_E, RANK_1), Square(FILE_G, RANK_1)) => {
+            (bitboard::E1, bitboard::G1) => {
                 return Some(Move::Castling {
-                    from: from,
-                    to: to,
-                    from_rook: Square::new_nocheck(FILE_H, RANK_1),
-                    to_rook: Square::new_nocheck(FILE_F, RANK_1),
+                    from,
+                    to,
+                    from_rook: bitboard::H1,
+                    to_rook: bitboard::F1,
                     color: Color::White,
-                    castling_rights: game.castling_rights,
-                })
-            },
-            (Square(FILE_E, RANK_1), Square(FILE_C, RANK_1)) => {
-                return Some(Move::Castling {
-                    from: from,
-                    to: to,
-                    from_rook: Square::new_nocheck(FILE_A, RANK_1),
-                    to_rook: Square::new_nocheck(FILE_D, RANK_1),
-                    color: Color::White,
-                    castling_rights: game.castling_rights,
-                })
-            },
-            (Square(FILE_E, RANK_8), Square(FILE_C, RANK_8)) => {
-                return Some(Move::Castling {
-                    from: from,
-                    to: to,
-                    from_rook: Square::new_nocheck(FILE_A, RANK_8),
-                    to_rook: Square::new_nocheck(FILE_D, RANK_8),
-                    color: Color::Black,
-                    castling_rights: game.castling_rights,
-                })
-            },
-            (Square(FILE_E, RANK_8), Square(FILE_G, RANK_8)) => {
-                return Some(Move::Castling {
-                    from: from,
-                    to: to,
-                    from_rook: Square::new_nocheck(FILE_H, RANK_8),
-                    to_rook: Square::new_nocheck(FILE_F, RANK_8),
-                    color: Color::Black,
-                    castling_rights: game.castling_rights,
                 })
             }
-            _ => {},
+            (bitboard::E1, bitboard::C1) => {
+                return Some(Move::Castling {
+                    from,
+                    to,
+                    from_rook: bitboard::A1,
+                    to_rook: bitboard::D1,
+                    color: Color::White,
+                })
+            }
+            _ => {}
+        }
+    } else if game.board.black_king & (1 << from) != 0 {
+        match (from, to) {
+            (bitboard::E8, bitboard::C8) => {
+                return Some(Move::Castling {
+                    from,
+                    to,
+                    from_rook: bitboard::A8,
+                    to_rook: bitboard::D8,
+                    color: Color::Black,
+                })
+            }
+            (bitboard::E8, bitboard::G8) => {
+                return Some(Move::Castling {
+                    from,
+                    to,
+                    from_rook: bitboard::H8,
+                    to_rook: bitboard::F8,
+                    color: Color::Black,
+                })
+            }
+            _ => {}
         }
     }
 
@@ -84,7 +85,7 @@ fn parse_move(game: &Game, str: &str) -> Option<Move> {
         None => None,
     };
 
-    Some(Move::new(game, from, to, promotion))
+    Some(Move::new(from, to, game.board.get(from)?, promotion))
 }
 
 fn parse_position(split: &mut SplitAsciiWhitespace) -> Option<Command> {
@@ -113,7 +114,7 @@ fn parse_go(split: &mut SplitAsciiWhitespace) -> Option<Command> {
         Some("perft") => {
             let depth = split.next()?.parse().ok()?;
             Some(Command::Perft(depth))
-        },
+        }
         _ => Some(Command::Go("".to_owned())),
     }
 }
@@ -142,31 +143,31 @@ fn test_parse_castling() {
     match parse_command(cmd) {
         Some(Command::Position(g)) => {
             assert_eq!(g.board.to_fen(), "8/8/8/8/8/8/8/5RK1");
-        },
-        _ => unreachable!()
+        }
+        _ => unreachable!(),
     }
 
     let cmd = "position fen 8/8/8/8/8/8/8/R3K3 b - - 11 34 moves e1c1";
     match parse_command(cmd) {
         Some(Command::Position(g)) => {
             assert_eq!(g.board.to_fen(), "8/8/8/8/8/8/8/2KR4");
-        },
-        _ => unreachable!()
+        }
+        _ => unreachable!(),
     }
 
     let cmd = "position fen 4k2r/8/8/8/8/8/8/8 b - - 11 34 moves e8g8";
     match parse_command(cmd) {
         Some(Command::Position(g)) => {
             assert_eq!(g.board.to_fen(), "5rk1/8/8/8/8/8/8/8");
-        },
-        _ => unreachable!()
+        }
+        _ => unreachable!(),
     }
 
     let cmd = "position fen r3k3/8/8/8/8/8/8/8 b - - 11 34 moves e8c8";
     match parse_command(cmd) {
         Some(Command::Position(g)) => {
             assert_eq!(g.board.to_fen(), "2kr4/8/8/8/8/8/8/8");
-        },
-        _ => unreachable!()
+        }
+        _ => unreachable!(),
     }
 }

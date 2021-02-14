@@ -1,46 +1,36 @@
 use crate::{
-    board::{
-        Color, Piece, PieceType, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H,
-        RANK_1, RANK_2, RANK_4, RANK_8,
-    },
-    game::{
-        CastlingRights, Game, BLACK_KINGSIDE, BLACK_QUEENSIDE, WHITE_KINGSIDE, WHITE_QUEENSIDE,
-    },
-    square::Square,
+    bitboard::{self, bitboard_iter, shift_north_east, shift_north_west, shift_south_east, shift_south_west},
+    board::{Color, Piece, PieceType},
+    game::{Game, BLACK_KINGSIDE, BLACK_QUEENSIDE, WHITE_KINGSIDE, WHITE_QUEENSIDE},
+    square::square_string,
 };
+
+// TODO: don't use Board::set because it is slow
 
 #[derive(Clone, Copy, Debug)]
 pub enum Move {
     Normal {
-        from: Square,
-        to: Square,
+        from: u8,
+        to: u8,
         piece: Piece,
-        capture: Option<Piece>,
         promotion: Option<Piece>,
-        castling_rights: CastlingRights,
     },
     Castling {
-        from: Square,
-        to: Square,
-        from_rook: Square,
-        to_rook: Square,
+        from: u8,
+        to: u8,
+        from_rook: u8,
+        to_rook: u8,
         color: Color,
-        castling_rights: CastlingRights,
     },
 }
 
 impl Move {
-    pub fn new(game: &Game, from: Square, to: Square, promotion: Option<PieceType>) -> Self {
-        let piece = game.board.get(from).expect("the from square is empty");
-        let capture = game.board.get(to);
-
+    pub fn new(from: u8, to: u8, piece: Piece, promotion: Option<PieceType>) -> Self {
         Move::Normal {
-            from: from,
-            to: to,
-            piece: piece,
-            capture: capture,
+            from,
+            to,
+            piece,
             promotion: promotion.map(|typ| Piece::new(typ, piece.color)),
-            castling_rights: game.castling_rights,
         }
     }
 
@@ -50,11 +40,9 @@ impl Move {
                 from,
                 to,
                 piece: _,
-                capture: _,
                 promotion,
-                castling_rights: _,
             } => {
-                let mut res: String = from.to_string() + &to.to_string();
+                let mut res: String = square_string(from) + &square_string(to);
 
                 if let Some(p) = promotion {
                     res.push(match p.typ {
@@ -74,8 +62,7 @@ impl Move {
                 from_rook: _,
                 to_rook: _,
                 color: _,
-                castling_rights: _,
-            } => from.to_string() + &to.to_string(),
+            } => square_string(from) + &square_string(to),
         }
     }
 
@@ -86,9 +73,7 @@ impl Move {
                 from,
                 to,
                 piece,
-                capture: _,
                 promotion,
-                castling_rights: _,
             } => {
                 match piece {
                     Piece {
@@ -102,17 +87,19 @@ impl Move {
                     Piece {
                         typ: PieceType::Rook,
                         color: Color::Black,
-                    } => match from {
-                        Square(FILE_A, RANK_8) => game.castling_rights &= !BLACK_QUEENSIDE,
-                        Square(FILE_H, RANK_8) => game.castling_rights &= !BLACK_KINGSIDE,
-                        _ => {}
-                    },
+                    } => {
+                        if from == bitboard::A8 {
+                            game.castling_rights &= !BLACK_QUEENSIDE;
+                        } else if from == bitboard::H8 {
+                            game.castling_rights &= !BLACK_KINGSIDE;
+                        }
+                    }
                     Piece {
                         typ: PieceType::Rook,
                         color: Color::White,
                     } => match from {
-                        Square(FILE_A, RANK_1) => game.castling_rights &= !WHITE_QUEENSIDE,
-                        Square(FILE_H, RANK_1) => game.castling_rights &= !WHITE_KINGSIDE,
+                        bitboard::A1 => game.castling_rights &= !WHITE_QUEENSIDE,
+                        bitboard::H1 => game.castling_rights &= !WHITE_KINGSIDE,
                         _ => {}
                     },
                     _ => {}
@@ -132,7 +119,6 @@ impl Move {
                 from_rook,
                 to_rook,
                 color,
-                castling_rights: _,
             } => {
                 match color {
                     Color::White => game.castling_rights &= !(WHITE_QUEENSIDE | WHITE_KINGSIDE),
@@ -148,78 +134,90 @@ impl Move {
 
         game.player = game.player.opposite();
     }
+}
 
-    pub fn unmake(&self, game: &mut Game) {
-        match *self {
-            Move::Normal {
-                from,
-                to,
-                piece,
-                capture,
-                promotion: _,
-                castling_rights,
-            } => {
-                game.castling_rights = castling_rights;
-                game.board.set(from, Some(piece));
-                game.board.set(to, capture);
-            }
-            Move::Castling {
-                from,
-                to,
-                from_rook,
-                to_rook,
-                color,
-                castling_rights,
-            } => {
-                game.castling_rights = castling_rights;
-                game.board
-                    .set(from, Some(Piece::new(PieceType::King, color)));
-                game.board.set(to, None);
-                game.board
-                    .set(from_rook, Some(Piece::new(PieceType::Rook, color)));
-                game.board.set(to_rook, None);
-            }
-        }
+fn enumerate_white_pawns(game: &Game, moves: &mut Vec<Move>) {
+    // TODO: promotions
+    let empty = !(game.board.white_pieces | game.board.black_pieces);
+    let res = (game.board.white_pawns << 8) & empty;
+    for to in bitboard_iter(res) {
+        moves.push(Move::new(
+            to - 8,
+            to,
+            Piece::new(PieceType::Pawn, Color::White),
+            None,
+        ));
+    }
 
-        game.player = game.player.opposite();
+    let attacks_nw = shift_north_west(game.board.white_pawns) & game.board.black_pieces;
+    let attacks_ne = shift_north_east(game.board.white_pawns) & game.board.black_pieces;
+
+    for to in bitboard_iter(attacks_nw) {
+        moves.push(Move::new(
+            to - 7,
+            to,
+            Piece::new(PieceType::Pawn, Color::White),
+            None
+        ));
+    }
+
+    for to in bitboard_iter(attacks_ne){
+        moves.push(Move::new(
+            to-9,
+            to,
+            Piece::new(PieceType::Pawn, Color::White),
+            None
+        ))
+    }
+}
+
+fn enumerate_black_pawns(game: &Game, moves: &mut Vec<Move>) {
+    let empty = !(game.board.white_pieces | game.board.black_pieces);
+    let res = (game.board.black_pawns >> 8) & empty;
+
+    for to in bitboard_iter(res) {
+        moves.push(Move::new(
+            to + 8,
+            to,
+            Piece::new(PieceType::Pawn, Color::Black),
+            None,
+        ));
+    }
+
+    let attacks_sw = shift_south_west(game.board.black_pawns) & game.board.white_pieces;
+    let attacks_se = shift_south_east(game.board.black_pawns) & game.board.white_pieces;
+
+    for to in bitboard_iter(attacks_sw) {
+        moves.push(Move::new(
+            to + 9,
+            to,
+            Piece::new(PieceType::Pawn, Color::Black),
+            None
+        ));
+    }
+
+    for to in bitboard_iter(attacks_se){
+        moves.push(Move::new(
+            to + 7,
+            to,
+            Piece::new(PieceType::Pawn, Color::Black),
+            None
+        ))
     }
 }
 
 /// Generate pseudo legal moves
 pub fn enumerate_moves(game: &Game) -> Vec<Move> {
     let mut moves = Vec::with_capacity(1000);
-    let mut has_king = false;
-    for rank in 0..8 {
-        for file in 0..8 {
-            let sq = Square::new_nocheck(file, rank);
-            if let Some(piece) = game.board.get(sq) {
-                if piece.color == game.player {
-                    match piece.typ {
-                        PieceType::King => {
-                            has_king = true;
-                            enumerate_king(game, game.player, sq, &mut moves);
-                        }
-                        PieceType::Queen => enumerate_queen(game, game.player, sq, &mut moves),
-                        PieceType::Rook => enumerate_rook(game, game.player, sq, &mut moves),
-                        PieceType::Bishop => enumerate_bishop(game, game.player, sq, &mut moves),
-                        PieceType::Knight => enumerate_knight(game, game.player, sq, &mut moves),
-                        PieceType::Pawn => enumerate_pawn(game, game.player, sq, &mut moves),
-                    }
-                }
-            }
-        }
-    }
-
-    enumerate_castlings(game, &mut moves);
-
-    if !has_king {
-        eprintln!("{} has no king: {}", game.player.to_string(), game.board.to_fen());
-        unreachable!();
+    match game.player {
+        Color::White => enumerate_white_pawns(game, &mut moves),
+        Color::Black => enumerate_black_pawns(game, &mut moves),
     }
 
     moves
 }
 
+/*
 fn enumerate_castlings(game: &Game, moves: &mut Vec<Move>) {
     if game.castling_rights | WHITE_QUEENSIDE != 0
         && game
@@ -455,3 +453,4 @@ fn enumerate_knight(game: &Game, color: Color, from: Square, moves: &mut Vec<Mov
         }
     }
 }
+*/

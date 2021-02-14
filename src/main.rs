@@ -6,6 +6,7 @@ mod moves;
 mod search;
 mod square;
 mod uci;
+mod bitboard;
 
 use std::{
     fs::File,
@@ -38,6 +39,7 @@ fn main() {
             Some(Command::Position(g)) => game = Some(g),
             Some(Command::Go(_)) => {
                 let g = game.as_ref().expect("no position");
+                println!("{}", g.board.to_string());
                 let (m, score) = best_move(&g, 6).expect("no valid move");
                 let str = format!(
                     "info score cp {}\nbestmove {}\n",

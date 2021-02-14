@@ -1,5 +1,3 @@
-use std::cmp::{max, min};
-
 use crate::{board::{Color, Piece, PieceType}, eval::evaluate, game::Game, moves::Move, moves::enumerate_moves, square::Square};
 
 pub fn best_move(game: &Game, depth: u32) -> Option<(Move, i32)> {
@@ -9,38 +7,19 @@ pub fn best_move(game: &Game, depth: u32) -> Option<(Move, i32)> {
 
     let mut game = game.clone();
 
-    let moves = enumerate_moves(&mut game);
-
-    let (mut best_score, best_m) = minmax(&mut game, 0, depth, &moves);
+    let (mut best_score, best_m) = minmax(&mut game, 0, depth);
     best_score *= game.player.to_int(); 
 
     Some((best_m?, best_score))
 }
 
-fn contains_king_capture(moves: &Vec<Move>) -> bool {
-    moves.iter().any(|m| match m {
-        Move::Normal {
-            capture:
-                Some(Piece {
-                    typ: PieceType::King,
-                    ..
-                }),
-            ..
-        } => true,
-        _ => false,
-    })
+pub fn perft(depth: u32) -> u32 {
+    println!("not implemented");
+    0
 }
 
-fn square_is_threatened(square: Square, moves: &Vec<Move>) -> bool {
-    moves.iter().any(|m| match m {
-        Move::Normal {
-            to: sq, ..
-        } if *sq == square => true,
-        _ => false,
-    })
-}
 
-fn minmax(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i32, Option<Move>) {
+fn minmax(game: &Game, depth: u32, max_depth: u32) -> (i32, Option<Move>) {
     if depth == max_depth {
         (evaluate(&game.board, depth), None)
     } else {
@@ -52,35 +31,15 @@ fn minmax(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i3
         };
         let mut best_m = None;
 
-        'lop: for m in moves.iter() {
-            m.make(game);
+        let moves = enumerate_moves(game);
 
-            let opp_moves = enumerate_moves(game);
+        for m in moves.iter() {
+            let mut new_game = game.clone();
+            m.make(&mut new_game);
 
-            // if the opponent has a (pseudo-legal) king capture, it means that
-            // the current move is illegal so we continue
-            if contains_king_capture(&opp_moves) {
-                m.unmake(game);
-                continue;
-            }
+            let (score, _) = minmax(&new_game, depth + 1, max_depth);
 
-            if let Move::Castling { from, to, ..} = m {
-                assert_eq!(from.rank(), to.rank());
-                let min_file = min(from.file(), to.file());
-                let max_file = max(from.file(), to.file());
-
-                for f in min_file..max_file {
-                    if square_is_threatened(Square::new_nocheck(f, from.rank()), &opp_moves) {
-                        m.unmake(game);
-                        continue 'lop;
-                    }
-                }
-            }
-
-            let (score, _) = minmax(game, depth + 1, max_depth, &opp_moves);
-
-            // we are now game.player.opposite() because m.make(game) changed the current player
-            match game.player.opposite() {
+            match game.player {
                 Color::White => {
                     if score > best_score {
                         best_score = score;
@@ -94,25 +53,13 @@ fn minmax(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> (i3
                     }
                 }
             };
-            m.unmake(game);
         }
 
-        // we have no legal move
-        // this is either a checkmate or a stalemate
-        if best_m.is_none() {
-            game.player = game.player.opposite();
-            let opp_moves = enumerate_moves(game);
-            game.player = game.player.opposite();
-            if contains_king_capture(&opp_moves) {
-                // do nothing, the initial best_score is good
-            } else {
-                best_score = 0;
-            }
-        }
         (best_score, best_m.copied())
     }
 }
 
+/* 
 pub fn perft(depth: u32) -> u32 {
     let mut game = Game::new();
 
@@ -161,4 +108,4 @@ fn perft_rec(game: &mut Game, depth: u32, max_depth: u32, moves: &Vec<Move>) -> 
         }
         n
     }
-}
+} */

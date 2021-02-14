@@ -49,8 +49,19 @@ pub fn piece_square_value(p: Piece, file: u8, rank: u8) -> i32 {
 }
 
 pub fn evaluate(board: &Board, depth: u32) -> i32 {
-    // TODO: check
-    let mut val = 0;
+    // TODO: piece square value
+    assert!(board.black_king != 0);
+    assert!(board.white_king != 0);
+    assert_eq!(board.white_pieces, board.white_king | board.white_queens | board.white_rooks | board.white_bishops | board.white_knights | board.white_pawns);
+    assert_eq!(board.black_pieces, board.black_king | board.black_queens | board.black_rooks | board.black_bishops | board.black_knights | board.black_pawns);
+
+    1000 * (board.white_queens.count_ones() as i32 - board.black_queens.count_ones() as i32)
+    + 525 * (board.white_rooks.count_ones() as i32- board.black_rooks.count_ones() as i32)
+    + 350 * (board.white_bishops.count_ones() as i32 - board.black_bishops.count_ones() as i32)
+    + 350 * (board.white_knights.count_ones() as i32- board.black_knights.count_ones() as i32)
+    + 100 * (board.white_pawns.count_ones() as i32 - board.black_pawns.count_ones() as i32)
+
+    /* let mut val = 0;
 
     for rank in 0u8..8u8 {
         for file in 0u8..8u8 {
@@ -60,5 +71,5 @@ pub fn evaluate(board: &Board, depth: u32) -> i32 {
             }
         }
     }
-    val
+    val */
 }

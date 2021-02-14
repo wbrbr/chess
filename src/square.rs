@@ -1,4 +1,70 @@
-use crate::board::{FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
+use crate::board::{
+    FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_2, RANK_3, RANK_4,
+    RANK_5, RANK_6, RANK_7, RANK_8,
+};
+
+pub fn square_from_chars(file: char, rank: char) -> Option<u8> {
+    let filei = match file {
+        'a' => FILE_A,
+        'b' => FILE_B,
+        'c' => FILE_C,
+        'd' => FILE_D,
+        'e' => FILE_E,
+        'f' => FILE_F,
+        'g' => FILE_G,
+        'h' => FILE_H,
+        _ => return None,
+    };
+
+    let ranki = match rank {
+        '1' => 0,
+        '2' => 1,
+        '3' => 2,
+        '4' => 3,
+        '5' => 4,
+        '6' => 5,
+        '7' => 6,
+        '8' => 7,
+        _ => return None,
+    };
+
+    Some(8*ranki+filei)
+}
+
+pub fn square_string(sq: u8) -> String {
+    assert!(sq < 64);
+
+    let filei = sq % 8;
+    let ranki = sq / 8;
+
+    let mut res = String::new();
+
+    res += match filei {
+        0 => "a",
+        1 => "b",
+        2 => "c",
+        3 => "d",
+        4 => "e",
+        5 => "f",
+        6 => "g",
+        7 => "h",
+        _ => unreachable!(),
+    };
+
+    res += match ranki {
+        0 => "1",
+        1 => "2",
+        2 => "3",
+        3 => "4",
+        4 => "5",
+        5 => "6",
+        6 => "7",
+        7 => "8",
+        _ => unreachable!(),
+    };
+
+    res
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Square(pub u8, pub u8);

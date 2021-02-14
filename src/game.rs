@@ -52,7 +52,7 @@ impl Game {
 
     pub fn new() -> Self {
         Game {
-            board: Board::starting_board(),
+            board: Board::new(),
             player: Color::White,
             castling_rights: 0b1111,
         }
@@ -63,7 +63,7 @@ impl Game {
 fn test_parse_game_start() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let game = Game {
-        board: Board::starting_board(),
+        board: Board::new(),
         player: Color::White,
         castling_rights: 0b1111,
     };
